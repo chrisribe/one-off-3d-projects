@@ -159,8 +159,8 @@
     };
 
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 1000);
-    camera.position.set(0, 31, 36);
+    const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 1000);
+    camera.position.set(0, 32, 44);
 
     const view = el('view');
     const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -316,9 +316,11 @@
       doneGroup.add(...doneBase.children);
       progressGroup.add(...progBase.children);
 
-      doneGroup.position.x = -p.d * 0.48;
+      // keep clear air-gap between tokens (no touching/merging)
+      const centerOffset = p.d * 0.62;
+      doneGroup.position.x = -centerOffset;
       doneGroup.position.z = 0;
-      progressGroup.position.x = p.d * 0.48;
+      progressGroup.position.x = centerOffset;
       progressGroup.position.z = 0;
 
       addDoneIcon(doneGroup, p);
