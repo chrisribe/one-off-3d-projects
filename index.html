@@ -4,14 +4,111 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>One-off 3D Projects</title>
-  <meta http-equiv="refresh" content="0; url=./web/x1c-marker-customizer/" />
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 2rem; }
-    a { font-size: 1.1rem; }
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: #0f1218;
+      color: #e7ecf8;
+    }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 16px; }
+    h1 { margin: 0; font-size: 1.35rem; }
+    .sub { margin: 6px 0 16px; color: #9fadca; }
+    .topnav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 10px 0 16px;
+    }
+    .pill {
+      display: inline-block;
+      border: 1px solid #36425a;
+      background: #1b2433;
+      color: #dce6fb;
+      padding: 8px 12px;
+      border-radius: 999px;
+      text-decoration: none;
+      font-size: .92rem;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 12px;
+    }
+    .card {
+      border: 1px solid #2a3242;
+      background: #171c26;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .card img {
+      width: 100%;
+      aspect-ratio: 16/9;
+      object-fit: cover;
+      display: block;
+      background: #0e1219;
+    }
+    .card .b { padding: 12px; }
+    .k { color: #9fb0d3; font-size: .8rem; letter-spacing: .03em; text-transform: uppercase; }
+    h2 { margin: 6px 0 6px; font-size: 1.05rem; }
+    p { margin: 0 0 10px; color: #c8d4ec; font-size: .95rem; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn {
+      border: 1px solid #3b4b66;
+      background: #233148;
+      color: #eef3ff;
+      padding: 8px 10px;
+      border-radius: 9px;
+      text-decoration: none;
+      font-size: .9rem;
+      font-weight: 600;
+    }
+    .tags { margin-top: 8px; color: #95a4c4; font-size: .84rem; }
+    .foot { margin-top: 16px; color: #8ea0c6; font-size: .88rem; }
   </style>
 </head>
 <body>
-  <p>Redirecting to customizer…</p>
-  <p><a href="./web/x1c-marker-customizer/">Open X1C Marker Customizer</a></p>
+  <main class="wrap">
+    <h1>One-off 3D Projects</h1>
+    <div class="sub">Project index for web tools + source packs. Add new entries to <code>projects/index.json</code>.</div>
+
+    <nav class="topnav">
+      <a class="pill" href="./web/x1c-marker-customizer/">Open marker customizer</a>
+      <a class="pill" href="https://github.com/chrisribe/one-off-3d-projects" target="_blank" rel="noreferrer">GitHub repo</a>
+    </nav>
+
+    <section id="cards" class="grid"></section>
+
+    <div class="foot">Future-proofing: every new project gets one JSON entry + its folder. The index auto-renders cards.</div>
+  </main>
+
+  <script>
+    const cards = document.getElementById('cards');
+    fetch('./projects/index.json')
+      .then(r => r.json())
+      .then(data => {
+        const projects = Array.isArray(data.projects) ? data.projects : [];
+        cards.innerHTML = projects.map(p => `
+          <article class="card">
+            ${p.preview ? `<img src="${p.preview}" alt="${p.title} preview">` : ''}
+            <div class="b">
+              <div class="k">${p.type || 'project'} · ${p.status || 'active'}</div>
+              <h2>${p.title || p.slug}</h2>
+              <p>${p.summary || ''}</p>
+              <div class="row">
+                ${p.web_url ? `<a class="btn" href="${p.web_url}">Open web tool</a>` : ''}
+                ${p.source_url ? `<a class="btn" href="${p.source_url}" target="_blank" rel="noreferrer">Open source files</a>` : ''}
+              </div>
+              <div class="tags">${(p.tags || []).map(t => `#${t}`).join(' ')}</div>
+            </div>
+          </article>
+        `).join('');
+      })
+      .catch(() => {
+        cards.innerHTML = '<article class="card"><div class="b"><h2>Project index unavailable</h2><p>Could not load <code>projects/index.json</code>.</p></div></article>';
+      });
+  </script>
 </body>
 </html>

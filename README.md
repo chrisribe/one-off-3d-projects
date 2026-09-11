@@ -9,6 +9,12 @@ Small, practical 3D models and quick prototypes.
   - Sized under a US dime in width
   - Variants with magnet press-fit pocket
 
+## Project index (future-proof navigation)
+
+- Root page: `index.html` (cards for all projects)
+- Registry: `projects/index.json`
+- Add one JSON entry per new project to have it appear in the index automatically.
+
 ## Interactive web customizer (no build)
 
 - `web/x1c-marker-customizer/index.html`

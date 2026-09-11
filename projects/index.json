@@ -1,0 +1,16 @@
+{
+  "repo": "https://github.com/chrisribe/one-off-3d-projects",
+  "projects": [
+    {
+      "slug": "x1c-whiteboard-markers",
+      "title": "X1C Whiteboard Markers",
+      "type": "web+model",
+      "status": "active",
+      "summary": "Language-agnostic DONE/IN-PROGRESS marker generator with direct STL download.",
+      "web_url": "./web/x1c-marker-customizer/",
+      "source_url": "https://github.com/chrisribe/one-off-3d-projects/tree/main/models/x1c-whiteboard-markers",
+      "preview": "./models/x1c-whiteboard-markers/x1c-whiteboard-markers-agnostic-preview.png",
+      "tags": ["x1c", "whiteboard", "magnet", "stl", "scad"]
+    }
+  ]
+}
