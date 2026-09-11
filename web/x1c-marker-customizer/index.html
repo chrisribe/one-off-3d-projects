@@ -137,7 +137,7 @@
     import { STLExporter } from 'three/addons/exporters/STLExporter.js';
     import { SVGLoader } from 'three/addons/loaders/SVGLoader.js';
     import { icon as faIcon } from 'https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-svg-core@6.5.2/+esm';
-    import { faCheck, faArrowsRotate } from 'https://cdn.jsdelivr.net/npm/@fortawesome/free-solid-svg-icons@6.5.2/+esm';
+    import { faCircleCheck, faArrowsRotate } from 'https://cdn.jsdelivr.net/npm/@fortawesome/free-solid-svg-icons@6.5.2/+esm';
 
     const el = (id) => document.getElementById(id);
     const inputs = {
@@ -256,7 +256,7 @@
       return out;
     }
 
-    const doneShapes = fontAwesomeShapes(faCheck);
+    const doneShapes = fontAwesomeShapes(faCircleCheck);
     const progressShapes = fontAwesomeShapes(faArrowsRotate);
 
     function extrudeShapes(shapes, height, mat, targetSpan = 10.8) {
@@ -290,7 +290,7 @@
     }
 
     function addDoneIcon(group, p) {
-      const mark = extrudeShapes(doneShapes, p.iconH, iconMatDone, 10.0);
+      const mark = extrudeShapes(doneShapes, p.iconH, iconMatDone, 10.8);
       mark.position.y = p.h - Math.min(0.08, p.iconH * 0.2); // slight overlap to guarantee printable union
       group.add(mark);
     }
