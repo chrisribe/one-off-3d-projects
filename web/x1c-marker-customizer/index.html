@@ -260,7 +260,7 @@
     const doneShapes = fontAwesomeShapes(faCheck);
     const progressShapes = fontAwesomeShapes(faRotateRight);
 
-    function extrudeShapes(shapes, height, mat, targetSpan = 10.8) {
+    function extrudeShapes(shapes, height, mat, targetSpan = 10.8, flipX = false) {
       const g = new THREE.ExtrudeGeometry(shapes, {
         depth: height,
         steps: 1,
@@ -276,7 +276,7 @@
       const spanZ = b1.max.z - b1.min.z;
       const span = Math.max(spanX, spanZ) || 1;
       const s = targetSpan / span;
-      g.scale(s, 1, s);
+      g.scale(flipX ? -s : s, 1, s);
 
       g.computeBoundingBox();
       const b2 = g.boundingBox;
@@ -294,7 +294,7 @@
       ring.position.y = p.h - Math.min(0.08, p.iconH * 0.2); // slight overlap to guarantee printable union
       group.add(ring);
 
-      const mark = extrudeShapes(doneShapes, p.iconH, iconMatDone, p.d * 0.38);
+      const mark = extrudeShapes(doneShapes, p.iconH, iconMatDone, p.d * 0.38, true);
       mark.position.y = p.h - Math.min(0.08, p.iconH * 0.2); // slight overlap to guarantee printable union
       group.add(mark);
     }
