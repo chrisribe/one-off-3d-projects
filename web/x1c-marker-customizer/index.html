@@ -284,20 +284,20 @@
       const b2 = g.boundingBox;
       const cx = (b2.min.x + b2.max.x) / 2;
       const cz = (b2.min.z + b2.max.z) / 2;
-      g.translate(-cx, height, -cz);
+      g.translate(-cx, 0, -cz);
 
       return new THREE.Mesh(g, mat);
     }
 
     function addDoneIcon(group, p) {
       const mark = extrudeShapes(doneShapes, p.iconH, iconMatDone, 10.0);
-      mark.position.y = p.h;
+      mark.position.y = p.h - Math.min(0.08, p.iconH * 0.2); // slight overlap to guarantee printable union
       group.add(mark);
     }
 
     function addProgressIcon(group, p) {
       const mark = extrudeShapes(progressShapes, p.iconH, iconMatProg, 10.8);
-      mark.position.y = p.h;
+      mark.position.y = p.h - Math.min(0.08, p.iconH * 0.2); // slight overlap to guarantee printable union
       group.add(mark);
     }
 
