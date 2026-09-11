@@ -135,6 +135,9 @@
     import * as THREE from 'three';
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
     import { STLExporter } from 'three/addons/exporters/STLExporter.js';
+    import { SVGLoader } from 'three/addons/loaders/SVGLoader.js';
+    import { icon as faIcon } from 'https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-svg-core@6.5.2/+esm';
+    import { faCheck, faArrowsRotate } from 'https://cdn.jsdelivr.net/npm/@fortawesome/free-solid-svg-icons@6.5.2/+esm';
 
     const el = (id) => document.getElementById(id);
     const inputs = {
@@ -243,66 +246,59 @@
       return g;
     }
 
-    function extrude2D(shape, height, mat) {
-      const g = new THREE.ExtrudeGeometry(shape, {
+    const svgLoader = new SVGLoader();
+
+    function fontAwesomeShapes(iconDef) {
+      const svg = faIcon(iconDef, { styles: { color: '#fff' } }).html.join('');
+      const parsed = svgLoader.parse(svg);
+      const out = [];
+      for (const p of parsed.paths) out.push(...SVGLoader.createShapes(p));
+      return out;
+    }
+
+    const doneShapes = fontAwesomeShapes(faCheck);
+    const progressShapes = fontAwesomeShapes(faArrowsRotate);
+
+    function extrudeShapes(shapes, height, mat, targetSpan = 10.8) {
+      const g = new THREE.ExtrudeGeometry(shapes, {
         depth: height,
         steps: 1,
         bevelEnabled: true,
         bevelThickness: Math.min(0.08, height * 0.22),
         bevelSize: 0.08,
         bevelSegments: 2,
-        curveSegments: 72,
+        curveSegments: 64,
       });
+
+      // FontAwesome is Y-up 2D. Convert to token top surface.
       g.rotateX(-Math.PI / 2);
-      g.translate(0, height, 0);
+      g.computeBoundingBox();
+      const b1 = g.boundingBox;
+      const spanX = b1.max.x - b1.min.x;
+      const spanZ = b1.max.z - b1.min.z;
+      const span = Math.max(spanX, spanZ) || 1;
+      const s = targetSpan / span;
+      g.scale(s, 1, s);
+
+      g.computeBoundingBox();
+      const b2 = g.boundingBox;
+      const cx = (b2.min.x + b2.max.x) / 2;
+      const cz = (b2.min.z + b2.max.z) / 2;
+      g.translate(-cx, height, -cz);
+
       return new THREE.Mesh(g, mat);
     }
 
     function addDoneIcon(group, p) {
-      const y = p.h;
-      // clean connected check shape (language-agnostic)
-      const check = new THREE.Shape();
-      check.moveTo(-5.0, 0.8);
-      check.lineTo(-3.8, -0.5);
-      check.lineTo(-1.2, 1.9);
-      check.lineTo(4.8, -4.2);
-      check.lineTo(6.0, -3.0);
-      check.lineTo(-1.2, 4.2);
-      check.lineTo(-5.0, 0.8);
-
-      const mark = extrude2D(check, p.iconH, iconMatDone);
-      mark.position.y = y;
+      const mark = extrudeShapes(doneShapes, p.iconH, iconMatDone, 10.0);
+      mark.position.y = p.h;
       group.add(mark);
     }
 
     function addProgressIcon(group, p) {
-      const y = p.h;
-
-      // crisp circular progress arc
-      const outerR = 5.5;
-      const innerR = 3.7;
-      const start = THREE.MathUtils.degToRad(225);
-      const end = THREE.MathUtils.degToRad(505);
-
-      const arcShape = new THREE.Shape();
-      arcShape.absarc(0, 0, outerR, start, end, false);
-      const cut = new THREE.Path();
-      cut.absarc(0, 0, innerR, start, end, false);
-      arcShape.holes.push(cut);
-
-      const arcMesh = extrude2D(arcShape, p.iconH, iconMatProg);
-      arcMesh.position.y = y;
-
-      const tip = new THREE.Shape();
-      tip.moveTo(0, 0);
-      tip.lineTo(2.8, 1.1);
-      tip.lineTo(0.9, 3.1);
-      tip.lineTo(0, 0);
-      const tipMesh = extrude2D(tip, p.iconH, iconMatProg);
-      tipMesh.rotation.y = THREE.MathUtils.degToRad(22);
-      tipMesh.position.set(4.1, y, 2.9);
-
-      group.add(arcMesh, tipMesh);
+      const mark = extrudeShapes(progressShapes, p.iconH, iconMatProg, 10.8);
+      mark.position.y = p.h;
+      group.add(mark);
     }
 
     function rebuild() {
