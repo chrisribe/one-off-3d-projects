@@ -288,15 +288,26 @@
     }
 
     function addDoneIcon(group, p) {
-      const ringOuter = p.d * 0.24;
-      const ringInner = ringOuter - Math.max(0.55, p.iconH * 0.9);
-      const ring = new THREE.Mesh(ringGeometry(ringOuter, ringInner, p.iconH), iconMatDone);
-      ring.position.y = p.h - Math.min(0.08, p.iconH * 0.2); // slight overlap to guarantee printable union
-      group.add(ring);
+      const overlap = Math.min(0.08, p.iconH * 0.2);
+      const y = p.h - overlap + p.iconH / 2;
 
-      const mark = extrudeShapes(doneShapes, p.iconH, iconMatDone, p.d * 0.38, true);
-      mark.position.y = p.h - Math.min(0.08, p.iconH * 0.2); // slight overlap to guarantee printable union
-      group.add(mark);
+      // Hand-built check for stable orientation: short stroke, then longer right stroke.
+      const strokeD = Math.max(0.7, p.d * 0.07);
+      const shortLen = p.d * 0.16;
+      const longLen = p.d * 0.34;
+
+      const shortStroke = new THREE.Mesh(new THREE.BoxGeometry(shortLen, p.iconH, strokeD), iconMatDone);
+      shortStroke.position.set(-p.d * 0.13, y, p.d * 0.04);
+      shortStroke.rotation.y = THREE.MathUtils.degToRad(-38);
+
+      const longStroke = new THREE.Mesh(new THREE.BoxGeometry(longLen, p.iconH, strokeD), iconMatDone);
+      longStroke.position.set(p.d * 0.03, y, -p.d * 0.045);
+      longStroke.rotation.y = THREE.MathUtils.degToRad(42);
+
+      const joint = new THREE.Mesh(new THREE.BoxGeometry(strokeD * 0.9, p.iconH, strokeD * 0.9), iconMatDone);
+      joint.position.set(-p.d * 0.04, y, p.d * 0.005);
+
+      group.add(shortStroke, longStroke, joint);
     }
 
     function addProgressIcon(group, p) {
