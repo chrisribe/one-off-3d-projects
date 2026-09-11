@@ -154,8 +154,8 @@
     };
 
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 1000);
-    camera.position.set(0, 20, 46);
+    const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 1000);
+    camera.position.set(0, 24, 52);
 
     const view = el('view');
     const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -164,7 +164,9 @@
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
-    controls.target.set(0, 2, 0);
+    controls.target.set(0, 1.8, 0);
+    controls.minDistance = 20;
+    controls.maxDistance = 120;
 
     scene.add(new THREE.AmbientLight(0xffffff, 0.7));
     const key = new THREE.DirectionalLight(0xffffff, 1.0);
@@ -179,9 +181,9 @@
     ground.position.y = -0.01;
     scene.add(ground);
 
-    const tokenMat = new THREE.MeshStandardMaterial({ color: 0xd9dee9, roughness: 0.55, metalness: 0.08 });
-    const iconMatDone = new THREE.MeshStandardMaterial({ color: 0x2faa62, roughness: 0.35, metalness: 0.06 });
-    const iconMatProg = new THREE.MeshStandardMaterial({ color: 0xd0475a, roughness: 0.35, metalness: 0.06 });
+    const tokenMat = new THREE.MeshStandardMaterial({ color: 0xe3e7ef, roughness: 0.42, metalness: 0.06 });
+    const iconMatDone = new THREE.MeshStandardMaterial({ color: 0x22a85a, roughness: 0.28, metalness: 0.05 });
+    const iconMatProg = new THREE.MeshStandardMaterial({ color: 0xcb4056, roughness: 0.28, metalness: 0.05 });
 
     let doneGroup = new THREE.Group();
     let progressGroup = new THREE.Group();
@@ -241,35 +243,66 @@
       return g;
     }
 
+    function extrude2D(shape, height, mat) {
+      const g = new THREE.ExtrudeGeometry(shape, {
+        depth: height,
+        steps: 1,
+        bevelEnabled: true,
+        bevelThickness: Math.min(0.08, height * 0.22),
+        bevelSize: 0.08,
+        bevelSegments: 2,
+        curveSegments: 72,
+      });
+      g.rotateX(-Math.PI / 2);
+      g.translate(0, height, 0);
+      return new THREE.Mesh(g, mat);
+    }
+
     function addDoneIcon(group, p) {
-      const y = p.h + p.iconH / 2;
-      const a = new THREE.Mesh(new THREE.BoxGeometry(3.8, p.iconH, 2.0), iconMatDone);
-      a.rotation.y = THREE.MathUtils.degToRad(40);
-      a.position.set(-1.9, y, 1.2);
+      const y = p.h;
+      // clean connected check shape (language-agnostic)
+      const check = new THREE.Shape();
+      check.moveTo(-5.0, 0.8);
+      check.lineTo(-3.8, -0.5);
+      check.lineTo(-1.2, 1.9);
+      check.lineTo(4.8, -4.2);
+      check.lineTo(6.0, -3.0);
+      check.lineTo(-1.2, 4.2);
+      check.lineTo(-5.0, 0.8);
 
-      const b = new THREE.Mesh(new THREE.BoxGeometry(7.4, p.iconH, 2.0), iconMatDone);
-      b.rotation.y = THREE.MathUtils.degToRad(-43);
-      b.position.set(1.8, y, -0.7);
-
-      group.add(a, b);
+      const mark = extrude2D(check, p.iconH, iconMatDone);
+      mark.position.y = y;
+      group.add(mark);
     }
 
     function addProgressIcon(group, p) {
-      const y = p.h + p.iconH / 2;
-      const arc = new THREE.Mesh(
-        new THREE.TorusGeometry(4.4, 0.8, 20, 120, Math.PI * 1.6),
-        iconMatProg
-      );
-      arc.rotation.x = Math.PI / 2;
-      arc.rotation.z = THREE.MathUtils.degToRad(14);
-      arc.position.y = y;
+      const y = p.h;
 
-      const head = new THREE.Mesh(new THREE.ConeGeometry(1.5, 2.8, 3), iconMatProg);
-      head.rotation.x = Math.PI / 2;
-      head.rotation.z = THREE.MathUtils.degToRad(50);
-      head.position.set(3.9, y + 0.05, 2.8);
+      // crisp circular progress arc
+      const outerR = 5.5;
+      const innerR = 3.7;
+      const start = THREE.MathUtils.degToRad(225);
+      const end = THREE.MathUtils.degToRad(505);
 
-      group.add(arc, head);
+      const arcShape = new THREE.Shape();
+      arcShape.absarc(0, 0, outerR, start, end, false);
+      const cut = new THREE.Path();
+      cut.absarc(0, 0, innerR, start, end, false);
+      arcShape.holes.push(cut);
+
+      const arcMesh = extrude2D(arcShape, p.iconH, iconMatProg);
+      arcMesh.position.y = y;
+
+      const tip = new THREE.Shape();
+      tip.moveTo(0, 0);
+      tip.lineTo(2.8, 1.1);
+      tip.lineTo(0.9, 3.1);
+      tip.lineTo(0, 0);
+      const tipMesh = extrude2D(tip, p.iconH, iconMatProg);
+      tipMesh.rotation.y = THREE.MathUtils.degToRad(22);
+      tipMesh.position.set(4.1, y, 2.9);
+
+      group.add(arcMesh, tipMesh);
     }
 
     function rebuild() {
@@ -288,8 +321,10 @@
       doneGroup.add(...doneBase.children);
       progressGroup.add(...progBase.children);
 
-      doneGroup.position.x = -p.d * 0.9;
-      progressGroup.position.x = p.d * 0.9;
+      doneGroup.position.x = -p.d * 0.75;
+      doneGroup.position.z = 0;
+      progressGroup.position.x = p.d * 0.75;
+      progressGroup.position.z = 0;
 
       addDoneIcon(doneGroup, p);
       addProgressIcon(progressGroup, p);
