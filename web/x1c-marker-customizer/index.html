@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>X1C Marker Customizer</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: #0f1218;
+      color: #e8edf7;
+      overflow-x: hidden;
+    }
+    .wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 14px;
+      display: grid;
+      gap: 12px;
+      grid-template-columns: 340px 1fr;
+    }
+    .panel {
+      background: #171c26;
+      border: 1px solid #2a3242;
+      border-radius: 12px;
+      padding: 12px;
+    }
+    h1 { margin: 0 0 4px; font-size: 1.2rem; }
+    .muted { color: #9fadca; font-size: .9rem; margin-bottom: 10px; }
+    .row { margin-bottom: 10px; }
+    .row label {
+      display: flex;
+      justify-content: space-between;
+      font-size: .9rem;
+      margin-bottom: 6px;
+      color: #c9d5ef;
+      gap: 8px;
+    }
+    input[type="range"], select {
+      width: 100%;
+    }
+    .btns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    button {
+      border: 1px solid #3a4761;
+      background: #233148;
+      color: #eef3ff;
+      padding: 10px;
+      border-radius: 10px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:hover { background: #2c3e5e; }
+    .full { grid-column: 1 / -1; }
+    #view {
+      width: 100%;
+      min-height: 68vh;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid #2a3242;
+      background: radial-gradient(circle at 30% 20%, #202838, #0d1016);
+    }
+    @media (max-width: 900px) {
+      .wrap { grid-template-columns: 1fr; }
+      #view { min-height: 52vh; }
+    }
+    code { background: #121723; padding: 1px 4px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="panel">
+      <h1>X1C Marker Customizer</h1>
+      <div class="muted">No build needed. Change params, preview live, download STL.</div>
+
+      <div class="row">
+        <label>Diameter (mm) <span id="diameter_v"></span></label>
+        <input id="diameter" type="range" min="12" max="17.8" step="0.1" value="16.5" />
+      </div>
+
+      <div class="row">
+        <label>Thickness (mm) <span id="height_v"></span></label>
+        <input id="height" type="range" min="1.8" max="3.5" step="0.1" value="2.4" />
+      </div>
+
+      <div class="row">
+        <label>Icon height (mm) <span id="iconH_v"></span></label>
+        <input id="iconH" type="range" min="0.4" max="1.2" step="0.05" value="0.8" />
+      </div>
+
+      <div class="row">
+        <label>Magnet pocket diameter (mm) <span id="magnetD_v"></span></label>
+        <input id="magnetD" type="range" min="5.8" max="6.5" step="0.05" value="6.2" />
+      </div>
+
+      <div class="row">
+        <label>Magnet pocket depth (mm) <span id="pocketDepth_v"></span></label>
+        <input id="pocketDepth" type="range" min="0.8" max="2.3" step="0.05" value="2.1" />
+      </div>
+
+      <div class="row">
+        <label>Include magnet pocket</label>
+        <input id="usePocket" type="checkbox" checked />
+      </div>
+
+      <div class="btns">
+        <button id="dlDone">Download DONE STL</button>
+        <button id="dlProgress">Download PROGRESS STL</button>
+        <button id="reset" class="full">Reset defaults</button>
+      </div>
+
+      <p class="muted" style="margin-top:10px">Tip: for pressure-fit 6 mm magnets, test <code>6.0 / 6.1 / 6.2</code> mm pocket diameters.</p>
+    </div>
+
+    <div id="view"></div>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+    import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js';
+    import { STLExporter } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/exporters/STLExporter.js';
+
+    const el = (id) => document.getElementById(id);
+    const inputs = {
+      diameter: el('diameter'),
+      height: el('height'),
+      iconH: el('iconH'),
+      magnetD: el('magnetD'),
+      pocketDepth: el('pocketDepth'),
+      usePocket: el('usePocket')
+    };
+    const labels = {
+      diameter: el('diameter_v'),
+      height: el('height_v'),
+      iconH: el('iconH_v'),
+      magnetD: el('magnetD_v'),
+      pocketDepth: el('pocketDepth_v')
+    };
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 1000);
+    camera.position.set(0, 20, 46);
+
+    const view = el('view');
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    view.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.target.set(0, 2, 0);
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+    const key = new THREE.DirectionalLight(0xffffff, 1.0);
+    key.position.set(14, 22, 16);
+    scene.add(key);
+
+    const ground = new THREE.Mesh(
+      new THREE.CircleGeometry(80, 128),
+      new THREE.MeshStandardMaterial({ color: 0x11151f, roughness: 0.95, metalness: 0.02 })
+    );
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = -0.01;
+    scene.add(ground);
+
+    const tokenMat = new THREE.MeshStandardMaterial({ color: 0xd9dee9, roughness: 0.55, metalness: 0.08 });
+    const iconMatDone = new THREE.MeshStandardMaterial({ color: 0x2faa62, roughness: 0.35, metalness: 0.06 });
+    const iconMatProg = new THREE.MeshStandardMaterial({ color: 0xd0475a, roughness: 0.35, metalness: 0.06 });
+
+    let doneGroup = new THREE.Group();
+    let progressGroup = new THREE.Group();
+    scene.add(doneGroup, progressGroup);
+
+    function ringGeometry(outerR, innerR, depth) {
+      const shape = new THREE.Shape();
+      shape.absarc(0, 0, outerR, 0, Math.PI * 2, false);
+      const hole = new THREE.Path();
+      hole.absarc(0, 0, innerR, 0, Math.PI * 2, true);
+      shape.holes.push(hole);
+      const g = new THREE.ExtrudeGeometry(shape, { depth, steps: 1, bevelEnabled: false, curveSegments: 96 });
+      g.rotateX(Math.PI / 2);
+      g.translate(0, depth, 0);
+      return g;
+    }
+
+    function getParams() {
+      const p = {
+        d: parseFloat(inputs.diameter.value),
+        h: parseFloat(inputs.height.value),
+        iconH: parseFloat(inputs.iconH.value),
+        magnetD: parseFloat(inputs.magnetD.value),
+        pocketDepth: parseFloat(inputs.pocketDepth.value),
+        usePocket: inputs.usePocket.checked,
+      };
+      p.pocketDepth = Math.min(p.pocketDepth, Math.max(0.2, p.h - 0.3));
+      return p;
+    }
+
+    function clearGroup(g) {
+      while (g.children.length) {
+        const c = g.children.pop();
+        c.geometry?.dispose?.();
+      }
+    }
+
+    function buildBase(p) {
+      const g = new THREE.Group();
+      const r = p.d / 2;
+      if (!p.usePocket) {
+        const full = new THREE.Mesh(new THREE.CylinderGeometry(r, r, p.h, 96), tokenMat);
+        full.position.y = p.h / 2;
+        g.add(full);
+        return g;
+      }
+
+      const pd = p.pocketDepth;
+      const topH = p.h - pd;
+      if (topH > 0.05) {
+        const top = new THREE.Mesh(new THREE.CylinderGeometry(r, r, topH, 96), tokenMat);
+        top.position.y = pd + topH / 2;
+        g.add(top);
+      }
+      const ring = new THREE.Mesh(ringGeometry(r, p.magnetD / 2, pd), tokenMat);
+      g.add(ring);
+      return g;
+    }
+
+    function addDoneIcon(group, p) {
+      const y = p.h + p.iconH / 2;
+      const a = new THREE.Mesh(new THREE.BoxGeometry(3.8, p.iconH, 2.0), iconMatDone);
+      a.rotation.y = THREE.MathUtils.degToRad(40);
+      a.position.set(-1.9, y, 1.2);
+
+      const b = new THREE.Mesh(new THREE.BoxGeometry(7.4, p.iconH, 2.0), iconMatDone);
+      b.rotation.y = THREE.MathUtils.degToRad(-43);
+      b.position.set(1.8, y, -0.7);
+
+      group.add(a, b);
+    }
+
+    function addProgressIcon(group, p) {
+      const y = p.h + p.iconH / 2;
+      const arc = new THREE.Mesh(
+        new THREE.TorusGeometry(4.4, 0.8, 20, 120, Math.PI * 1.6),
+        iconMatProg
+      );
+      arc.rotation.x = Math.PI / 2;
+      arc.rotation.z = THREE.MathUtils.degToRad(14);
+      arc.position.y = y;
+
+      const head = new THREE.Mesh(new THREE.ConeGeometry(1.5, 2.8, 3), iconMatProg);
+      head.rotation.x = Math.PI / 2;
+      head.rotation.z = THREE.MathUtils.degToRad(50);
+      head.position.set(3.9, y + 0.05, 2.8);
+
+      group.add(arc, head);
+    }
+
+    function rebuild() {
+      const p = getParams();
+      labels.diameter.textContent = p.d.toFixed(2);
+      labels.height.textContent = p.h.toFixed(2);
+      labels.iconH.textContent = p.iconH.toFixed(2);
+      labels.magnetD.textContent = p.magnetD.toFixed(2);
+      labels.pocketDepth.textContent = p.pocketDepth.toFixed(2);
+
+      clearGroup(doneGroup);
+      clearGroup(progressGroup);
+
+      const doneBase = buildBase(p);
+      const progBase = buildBase(p);
+      doneGroup.add(...doneBase.children);
+      progressGroup.add(...progBase.children);
+
+      doneGroup.position.x = -p.d * 0.9;
+      progressGroup.position.x = p.d * 0.9;
+
+      addDoneIcon(doneGroup, p);
+      addProgressIcon(progressGroup, p);
+    }
+
+    function resize() {
+      const w = view.clientWidth;
+      const h = view.clientHeight;
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    }
+
+    function animate() {
+      controls.update();
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+
+    const exporter = new STLExporter();
+    function download(name, object3d) {
+      const stl = exporter.parse(object3d, { binary: false });
+      const blob = new Blob([stl], { type: 'model/stl' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      return stl;
+    }
+
+    el('dlDone').addEventListener('click', () => {
+      const p = getParams();
+      download(`x1c-marker-done-d${p.d.toFixed(1)}-h${p.h.toFixed(1)}.stl`, doneGroup);
+    });
+    el('dlProgress').addEventListener('click', () => {
+      const p = getParams();
+      download(`x1c-marker-progress-d${p.d.toFixed(1)}-h${p.h.toFixed(1)}.stl`, progressGroup);
+    });
+
+    el('reset').addEventListener('click', () => {
+      inputs.diameter.value = '16.5';
+      inputs.height.value = '2.4';
+      inputs.iconH.value = '0.8';
+      inputs.magnetD.value = '6.2';
+      inputs.pocketDepth.value = '2.1';
+      inputs.usePocket.checked = true;
+      rebuild();
+    });
+
+    Object.values(inputs).forEach((node) => node.addEventListener('input', rebuild));
+    window.addEventListener('resize', resize);
+
+    // test hook for automated verification
+    window.__testGenerateDoneSTL = () => exporter.parse(doneGroup, { binary: false }).slice(0, 40);
+
+    rebuild();
+    resize();
+    animate();
+    window.__appReady = true;
+  </script>
+</body>
+</html>
