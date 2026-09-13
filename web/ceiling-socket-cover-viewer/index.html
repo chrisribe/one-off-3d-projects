@@ -16,10 +16,11 @@
     .btns { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:10px; }
     button { border:1px solid #3a4761; background:#233148; color:#eef3ff; padding:10px; border-radius:10px; font-weight:600; cursor:pointer; }
     button:hover { background:#2c3e5e; }
-    #view { width:100%; min-height:68vh; border-radius:12px; overflow:hidden; border:1px solid #2a3242; background:radial-gradient(circle at 30% 20%, #202838, #0d1016); }
+    #view { width:100%; height:clamp(320px, 58svh, 760px); border-radius:12px; overflow:hidden; border:1px solid #2a3242; background:radial-gradient(circle at 30% 20%, #202838, #0d1016); }
+    #view canvas { display:block; width:100% !important; height:100% !important; }
     .muted { color:#9fadca; font-size:.9rem; margin-bottom:10px; }
     .full { grid-column: 1 / -1; }
-    @media (max-width: 900px) { .wrap { grid-template-columns: 1fr; } #view { min-height: 52vh; } }
+    @media (max-width: 900px) { .wrap { grid-template-columns: 1fr; } #view { height:clamp(280px, 50svh, 520px); } }
   </style>
 </head>
 <body>
@@ -382,6 +383,7 @@
     function resize() {
       const w = view.clientWidth;
       const h = view.clientHeight;
+      if (!w || !h) return;
       renderer.setSize(w, h, false);
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
