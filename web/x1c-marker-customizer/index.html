@@ -27,6 +27,8 @@
       border: 1px solid #2a3242;
       border-radius: 12px;
       padding: 12px;
+      max-height: calc(100vh - 28px);
+      overflow: auto;
     }
     h1 { margin: 0 0 4px; font-size: 1.2rem; }
     .muted { color: #9fadca; font-size: .9rem; margin-bottom: 10px; }
@@ -39,8 +41,22 @@
       color: #c9d5ef;
       gap: 8px;
     }
-    input[type="range"], select {
+    input[type="range"], select, input[type="text"], input[type="color"] {
       width: 100%;
+    }
+    input[type="text"], select {
+      background: #121723;
+      color: #e8edf7;
+      border: 1px solid #2a3242;
+      border-radius: 8px;
+      padding: 8px;
+    }
+    input[type="color"] {
+      height: 38px;
+      border: 1px solid #2a3242;
+      border-radius: 8px;
+      background: #121723;
+      padding: 4px;
     }
     .btns {
       display: grid;
@@ -67,9 +83,16 @@
       border: 1px solid #2a3242;
       background: radial-gradient(circle at 30% 20%, #202838, #0d1016);
     }
+    .preset-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
     @media (max-width: 900px) {
       .wrap { grid-template-columns: 1fr; }
       #view { min-height: 52vh; }
+      .panel { max-height: none; }
     }
     code { background: #121723; padding: 1px 4px; border-radius: 4px; }
   </style>
@@ -78,8 +101,28 @@
   <div class="wrap">
     <div class="panel">
       <h1>X1C Marker Customizer</h1>
-      <div class="muted">No build needed. Change params, preview live, download STL.</div>
+      <div class="muted">Single marker mode. Choose any listed Font Awesome icon, preview live, download STL.</div>
       <div class="muted" style="margin-top:-4px"><a href="../../index.html" style="color:#9fc0ff">← Back to project index</a></div>
+
+      <div class="preset-row">
+        <button id="presetDone" type="button">Preset: DONE</button>
+        <button id="presetProgress" type="button">Preset: PROGRESS</button>
+      </div>
+
+      <div class="row">
+        <label>Find icon</label>
+        <input id="iconSearch" type="text" placeholder="Search icon name (check, rotate, wrench...)" />
+      </div>
+
+      <div class="row">
+        <label>Font Awesome icon <span id="iconLabel_v"></span></label>
+        <select id="iconSelect"></select>
+      </div>
+
+      <div class="row">
+        <label>Icon color</label>
+        <input id="iconColor" type="color" value="#22a85a" />
+      </div>
 
       <div class="row">
         <label>Diameter (mm) <span id="diameter_v"></span></label>
@@ -94,6 +137,11 @@
       <div class="row">
         <label>Icon height (mm) <span id="iconH_v"></span></label>
         <input id="iconH" type="range" min="0.4" max="1.2" step="0.05" value="0.8" />
+      </div>
+
+      <div class="row">
+        <label>Icon span (% of token) <span id="iconSpan_v"></span></label>
+        <input id="iconSpan" type="range" min="0.30" max="0.62" step="0.01" value="0.50" />
       </div>
 
       <div class="row">
@@ -112,12 +160,11 @@
       </div>
 
       <div class="btns">
-        <button id="dlDone">Download DONE STL</button>
-        <button id="dlProgress">Download PROGRESS STL</button>
+        <button id="dlMarker" class="full">Download Marker STL</button>
         <button id="reset" class="full">Reset defaults</button>
       </div>
 
-      <p class="muted" style="margin-top:10px">Tip: for pressure-fit 6 mm magnets, test <code>6.0 / 6.1 / 6.2</code> mm pocket diameters.</p>
+      <p class="muted" style="margin-top:10px">Guardrails: icon auto-fit keeps it inside token bounds and icon is slightly embedded into top surface for printable union.</p>
     </div>
 
     <div id="view"></div>
@@ -138,29 +185,125 @@
     import { STLExporter } from 'three/addons/exporters/STLExporter.js';
     import { SVGLoader } from 'three/addons/loaders/SVGLoader.js';
     import { icon as faIcon } from 'https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-svg-core@6.5.2/+esm';
-    import { faArrowsRotate } from 'https://cdn.jsdelivr.net/npm/@fortawesome/free-solid-svg-icons@6.5.2/+esm';
-    import { faCircleCheck as faCircleCheckRegular } from 'https://cdn.jsdelivr.net/npm/@fortawesome/free-regular-svg-icons@6.5.2/+esm';
+
+    import {
+      faCheck,
+      faArrowsRotate,
+      faClock,
+      faTriangleExclamation,
+      faWrench,
+      faBolt,
+      faHouse,
+      faTruck,
+      faBox,
+      faFlask,
+      faPrint,
+      faScrewdriverWrench,
+      faCircleInfo,
+      faThumbsUp,
+      faBug,
+      faGear,
+      faCalendarCheck,
+      faCirclePlay,
+      faSeedling,
+      faFire,
+      faXmark,
+      faBan,
+      faRecycle,
+      faShield,
+      faAnchor
+    } from 'https://cdn.jsdelivr.net/npm/@fortawesome/free-solid-svg-icons@6.5.2/+esm';
+
+    import {
+      faCircleCheck,
+      faCircleXmark,
+      faCircleQuestion
+    } from 'https://cdn.jsdelivr.net/npm/@fortawesome/free-regular-svg-icons@6.5.2/+esm';
+
+    const ICONS = [
+      { key: 'circle-check-regular', label: 'Circle Check (Regular)', def: faCircleCheck },
+      { key: 'check-solid', label: 'Check (Solid)', def: faCheck },
+      { key: 'arrows-rotate', label: 'Arrows Rotate', def: faArrowsRotate },
+      { key: 'clock-solid', label: 'Clock', def: faClock },
+      { key: 'calendar-check', label: 'Calendar Check', def: faCalendarCheck },
+      { key: 'circle-play', label: 'Circle Play', def: faCirclePlay },
+      { key: 'triangle-exclamation', label: 'Triangle Exclamation', def: faTriangleExclamation },
+      { key: 'wrench', label: 'Wrench', def: faWrench },
+      { key: 'screwdriver-wrench', label: 'Screwdriver Wrench', def: faScrewdriverWrench },
+      { key: 'gear', label: 'Gear', def: faGear },
+      { key: 'bolt', label: 'Bolt', def: faBolt },
+      { key: 'print', label: 'Print', def: faPrint },
+      { key: 'flask', label: 'Flask', def: faFlask },
+      { key: 'bug', label: 'Bug', def: faBug },
+      { key: 'truck', label: 'Truck', def: faTruck },
+      { key: 'box', label: 'Box', def: faBox },
+      { key: 'house', label: 'House', def: faHouse },
+      { key: 'seedling', label: 'Seedling', def: faSeedling },
+      { key: 'fire', label: 'Fire', def: faFire },
+      { key: 'recycle', label: 'Recycle', def: faRecycle },
+      { key: 'shield', label: 'Shield', def: faShield },
+      { key: 'anchor', label: 'Anchor', def: faAnchor },
+      { key: 'circle-info', label: 'Circle Info', def: faCircleInfo },
+      { key: 'thumbs-up', label: 'Thumbs Up', def: faThumbsUp },
+      { key: 'circle-question', label: 'Circle Question (Regular)', def: faCircleQuestion },
+      { key: 'xmark', label: 'X Mark', def: faXmark },
+      { key: 'ban', label: 'Ban', def: faBan },
+      { key: 'circle-xmark-regular', label: 'Circle X Mark (Regular)', def: faCircleXmark },
+    ];
+
+    const iconByKey = new Map(ICONS.map((i) => [i.key, i]));
+    const shapeCache = new Map();
 
     const el = (id) => document.getElementById(id);
     const inputs = {
+      iconSearch: el('iconSearch'),
+      iconSelect: el('iconSelect'),
+      iconColor: el('iconColor'),
       diameter: el('diameter'),
       height: el('height'),
       iconH: el('iconH'),
+      iconSpan: el('iconSpan'),
       magnetD: el('magnetD'),
       pocketDepth: el('pocketDepth'),
       usePocket: el('usePocket')
     };
     const labels = {
+      iconLabel: el('iconLabel_v'),
       diameter: el('diameter_v'),
       height: el('height_v'),
       iconH: el('iconH_v'),
+      iconSpan: el('iconSpan_v'),
       magnetD: el('magnetD_v'),
       pocketDepth: el('pocketDepth_v')
     };
 
+    function populateIconSelect(searchTerm = '') {
+      const q = searchTerm.trim().toLowerCase();
+      const previous = inputs.iconSelect.value;
+      const filtered = ICONS.filter((icon) => !q || icon.label.toLowerCase().includes(q) || icon.key.includes(q));
+      inputs.iconSelect.innerHTML = '';
+      for (const icon of filtered) {
+        const opt = document.createElement('option');
+        opt.value = icon.key;
+        opt.textContent = icon.label;
+        inputs.iconSelect.appendChild(opt);
+      }
+      if (!filtered.length) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = 'No icon matches search';
+        inputs.iconSelect.appendChild(opt);
+      } else if (filtered.some((i) => i.key === previous)) {
+        inputs.iconSelect.value = previous;
+      }
+    }
+
+    populateIconSelect('');
+    inputs.iconSelect.value = 'circle-check-regular';
+
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 1000);
-    camera.position.set(0, 32, 44);
+    camera.position.set(0, 28, 36);
 
     const view = el('view');
     const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -169,13 +312,13 @@
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
-    controls.target.set(0, 0.9, 0);
-    controls.minDistance = 14;
-    controls.maxDistance = 96;
+    controls.target.set(0, 0.8, 0);
+    controls.minDistance = 12;
+    controls.maxDistance = 80;
 
-    scene.add(new THREE.AmbientLight(0xffffff, 0.82));
-    const key = new THREE.DirectionalLight(0xffffff, 1.15);
-    key.position.set(14, 22, 16);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.84));
+    const key = new THREE.DirectionalLight(0xffffff, 1.1);
+    key.position.set(13, 20, 14);
     scene.add(key);
 
     const ground = new THREE.Mesh(
@@ -187,12 +330,8 @@
     scene.add(ground);
 
     const tokenMat = new THREE.MeshStandardMaterial({ color: 0xe3e7ef, roughness: 0.42, metalness: 0.06 });
-    const iconMatDone = new THREE.MeshStandardMaterial({ color: 0x22a85a, roughness: 0.28, metalness: 0.05 });
-    const iconMatProg = new THREE.MeshStandardMaterial({ color: 0xcb4056, roughness: 0.28, metalness: 0.05 });
-
-    let doneGroup = new THREE.Group();
-    let progressGroup = new THREE.Group();
-    scene.add(doneGroup, progressGroup);
+    let markerGroup = new THREE.Group();
+    scene.add(markerGroup);
 
     function ringGeometry(outerR, innerR, depth) {
       const shape = new THREE.Shape();
@@ -208,14 +347,18 @@
 
     function getParams() {
       const p = {
+        iconKey: inputs.iconSelect.value,
+        iconColor: inputs.iconColor.value,
         d: parseFloat(inputs.diameter.value),
         h: parseFloat(inputs.height.value),
         iconH: parseFloat(inputs.iconH.value),
+        iconSpan: parseFloat(inputs.iconSpan.value),
         magnetD: parseFloat(inputs.magnetD.value),
         pocketDepth: parseFloat(inputs.pocketDepth.value),
         usePocket: inputs.usePocket.checked,
       };
       p.pocketDepth = Math.min(p.pocketDepth, Math.max(0.2, p.h - 0.3));
+      p.iconSpanMm = Math.min(p.d * p.iconSpan, p.d * 0.68); // guardrail: keep icon safely inside token
       return p;
     }
 
@@ -258,10 +401,16 @@
       return out;
     }
 
-    const doneShapes = fontAwesomeShapes(faCircleCheckRegular);
-    const progressShapes = fontAwesomeShapes(faArrowsRotate);
+    function getShapes(iconKey) {
+      if (shapeCache.has(iconKey)) return shapeCache.get(iconKey);
+      const icon = iconByKey.get(iconKey);
+      if (!icon) return [];
+      const shapes = fontAwesomeShapes(icon.def);
+      shapeCache.set(iconKey, shapes);
+      return shapes;
+    }
 
-    function extrudeShapes(shapes, height, mat, targetSpan = 10.8) {
+    function extrudeShapes(shapes, height, targetSpan = 10.8) {
       const g = new THREE.ExtrudeGeometry(shapes, {
         depth: height,
         steps: 1,
@@ -285,19 +434,7 @@
       const cz = (b2.min.z + b2.max.z) / 2;
       g.translate(-cx, 0, -cz);
 
-      return new THREE.Mesh(g, mat);
-    }
-
-    function addDoneIcon(group, p) {
-      const mark = extrudeShapes(doneShapes, p.iconH, iconMatDone, p.d * 0.50);
-      mark.position.y = p.h - Math.min(0.08, p.iconH * 0.2); // slight overlap to guarantee printable union
-      group.add(mark);
-    }
-
-    function addProgressIcon(group, p) {
-      const mark = extrudeShapes(progressShapes, p.iconH, iconMatProg, p.d * 0.46);
-      mark.position.y = p.h - Math.min(0.08, p.iconH * 0.2); // slight overlap to guarantee printable union
-      group.add(mark);
+      return g;
     }
 
     function rebuild() {
@@ -305,26 +442,31 @@
       labels.diameter.textContent = p.d.toFixed(2);
       labels.height.textContent = p.h.toFixed(2);
       labels.iconH.textContent = p.iconH.toFixed(2);
+      labels.iconSpan.textContent = `${Math.round(p.iconSpan * 100)}%`;
       labels.magnetD.textContent = p.magnetD.toFixed(2);
       labels.pocketDepth.textContent = p.pocketDepth.toFixed(2);
+      const currentIcon = iconByKey.get(p.iconKey);
+      labels.iconLabel.textContent = currentIcon ? currentIcon.label : '';
 
-      clearGroup(doneGroup);
-      clearGroup(progressGroup);
+      clearGroup(markerGroup);
 
-      const doneBase = buildBase(p);
-      const progBase = buildBase(p);
-      doneGroup.add(...doneBase.children);
-      progressGroup.add(...progBase.children);
+      const base = buildBase(p);
+      markerGroup.add(...base.children);
 
-      // keep clear air-gap between tokens (no touching/merging)
-      const centerOffset = p.d * 0.62;
-      doneGroup.position.x = -centerOffset;
-      doneGroup.position.z = 0;
-      progressGroup.position.x = centerOffset;
-      progressGroup.position.z = 0;
+      const shapes = getShapes(p.iconKey);
+      if (shapes.length) {
+        const iconGeo = extrudeShapes(shapes, p.iconH, p.iconSpanMm);
+        const iconMat = new THREE.MeshStandardMaterial({
+          color: new THREE.Color(p.iconColor),
+          roughness: 0.28,
+          metalness: 0.05
+        });
+        const mark = new THREE.Mesh(iconGeo, iconMat);
+        mark.position.y = p.h - Math.min(0.08, p.iconH * 0.2); // slight overlap to guarantee printable union
+        markerGroup.add(mark);
+      }
 
-      addDoneIcon(doneGroup, p);
-      addProgressIcon(progressGroup, p);
+      markerGroup.position.set(0, 0, 0);
     }
 
     function resize() {
@@ -356,30 +498,59 @@
       return stl;
     }
 
-    el('dlDone').addEventListener('click', () => {
+    el('dlMarker').addEventListener('click', () => {
       const p = getParams();
-      download(`x1c-marker-done-d${p.d.toFixed(1)}-h${p.h.toFixed(1)}.stl`, doneGroup);
+      const iconSlug = (p.iconKey || 'icon').replace(/[^a-z0-9-]+/gi, '-').toLowerCase();
+      download(`x1c-marker-${iconSlug}-d${p.d.toFixed(1)}-h${p.h.toFixed(1)}.stl`, markerGroup);
     });
-    el('dlProgress').addEventListener('click', () => {
-      const p = getParams();
-      download(`x1c-marker-progress-d${p.d.toFixed(1)}-h${p.h.toFixed(1)}.stl`, progressGroup);
+
+    el('presetDone').addEventListener('click', () => {
+      inputs.iconSelect.value = 'circle-check-regular';
+      inputs.iconColor.value = '#22a85a';
+      inputs.iconSpan.value = '0.50';
+      rebuild();
+    });
+
+    el('presetProgress').addEventListener('click', () => {
+      inputs.iconSelect.value = 'arrows-rotate';
+      inputs.iconColor.value = '#cb4056';
+      inputs.iconSpan.value = '0.46';
+      rebuild();
     });
 
     el('reset').addEventListener('click', () => {
+      inputs.iconSearch.value = '';
+      populateIconSelect('');
+      inputs.iconSelect.value = 'circle-check-regular';
+      inputs.iconColor.value = '#22a85a';
       inputs.diameter.value = '16.5';
       inputs.height.value = '2.4';
       inputs.iconH.value = '0.8';
+      inputs.iconSpan.value = '0.50';
       inputs.magnetD.value = '6.2';
       inputs.pocketDepth.value = '2.1';
       inputs.usePocket.checked = true;
       rebuild();
     });
 
-    Object.values(inputs).forEach((node) => node.addEventListener('input', rebuild));
+    inputs.iconSearch.addEventListener('input', () => {
+      populateIconSelect(inputs.iconSearch.value);
+      if (!inputs.iconSelect.value && inputs.iconSelect.options.length) {
+        inputs.iconSelect.selectedIndex = 0;
+      }
+      rebuild();
+    });
+
+    Object.values(inputs).forEach((node) => {
+      if (node === inputs.iconSearch) return;
+      node.addEventListener('input', rebuild);
+      node.addEventListener('change', rebuild);
+    });
+
     window.addEventListener('resize', resize);
 
     // test hook for automated verification
-    window.__testGenerateDoneSTL = () => exporter.parse(doneGroup, { binary: false }).slice(0, 40);
+    window.__testGenerateSTL = () => exporter.parse(markerGroup, { binary: false }).slice(0, 40);
 
     rebuild();
     resize();
