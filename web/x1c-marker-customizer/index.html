@@ -253,6 +253,7 @@
 
     const iconByKey = new Map(ICONS.map((i) => [i.key, i]));
     const shapeCache = new Map();
+    let selectedIconKey = 'circle-check-regular';
 
     const el = (id) => document.getElementById(id);
     const inputs = {
@@ -279,27 +280,36 @@
 
     function populateIconSelect(searchTerm = '') {
       const q = searchTerm.trim().toLowerCase();
-      const previous = inputs.iconSelect.value;
       const filtered = ICONS.filter((icon) => !q || icon.label.toLowerCase().includes(q) || icon.key.includes(q));
       inputs.iconSelect.innerHTML = '';
+
+      if (!filtered.length) {
+        const current = iconByKey.get(selectedIconKey);
+        const opt = document.createElement('option');
+        opt.value = selectedIconKey;
+        opt.textContent = `No match — keeping ${current ? current.label : selectedIconKey}`;
+        inputs.iconSelect.appendChild(opt);
+        inputs.iconSelect.value = selectedIconKey;
+        return;
+      }
+
       for (const icon of filtered) {
         const opt = document.createElement('option');
         opt.value = icon.key;
         opt.textContent = icon.label;
         inputs.iconSelect.appendChild(opt);
       }
-      if (!filtered.length) {
-        const opt = document.createElement('option');
-        opt.value = '';
-        opt.textContent = 'No icon matches search';
-        inputs.iconSelect.appendChild(opt);
-      } else if (filtered.some((i) => i.key === previous)) {
-        inputs.iconSelect.value = previous;
+
+      if (filtered.some((i) => i.key === selectedIconKey)) {
+        inputs.iconSelect.value = selectedIconKey;
+      } else {
+        selectedIconKey = filtered[0].key;
+        inputs.iconSelect.value = selectedIconKey;
       }
     }
 
     populateIconSelect('');
-    inputs.iconSelect.value = 'circle-check-regular';
+    inputs.iconSelect.value = selectedIconKey;
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 1000);
@@ -330,6 +340,7 @@
     scene.add(ground);
 
     const tokenMat = new THREE.MeshStandardMaterial({ color: 0xe3e7ef, roughness: 0.42, metalness: 0.06 });
+    const iconMat = new THREE.MeshStandardMaterial({ color: 0x22a85a, roughness: 0.28, metalness: 0.05 });
     let markerGroup = new THREE.Group();
     scene.add(markerGroup);
 
@@ -347,7 +358,7 @@
 
     function getParams() {
       const p = {
-        iconKey: inputs.iconSelect.value,
+        iconKey: selectedIconKey,
         iconColor: inputs.iconColor.value,
         d: parseFloat(inputs.diameter.value),
         h: parseFloat(inputs.height.value),
@@ -456,11 +467,7 @@
       const shapes = getShapes(p.iconKey);
       if (shapes.length) {
         const iconGeo = extrudeShapes(shapes, p.iconH, p.iconSpanMm);
-        const iconMat = new THREE.MeshStandardMaterial({
-          color: new THREE.Color(p.iconColor),
-          roughness: 0.28,
-          metalness: 0.05
-        });
+        iconMat.color.set(p.iconColor);
         const mark = new THREE.Mesh(iconGeo, iconMat);
         mark.position.y = p.h - Math.min(0.08, p.iconH * 0.2); // slight overlap to guarantee printable union
         markerGroup.add(mark);
@@ -498,30 +505,33 @@
       return stl;
     }
 
+    function applyPreset(iconKey, color, span) {
+      inputs.iconSearch.value = '';
+      populateIconSelect('');
+      if (iconByKey.has(iconKey)) {
+        selectedIconKey = iconKey;
+        inputs.iconSelect.value = selectedIconKey;
+      }
+      inputs.iconColor.value = color;
+      inputs.iconSpan.value = span;
+      rebuild();
+    }
+
     el('dlMarker').addEventListener('click', () => {
       const p = getParams();
       const iconSlug = (p.iconKey || 'icon').replace(/[^a-z0-9-]+/gi, '-').toLowerCase();
       download(`x1c-marker-${iconSlug}-d${p.d.toFixed(1)}-h${p.h.toFixed(1)}.stl`, markerGroup);
     });
 
-    el('presetDone').addEventListener('click', () => {
-      inputs.iconSelect.value = 'circle-check-regular';
-      inputs.iconColor.value = '#22a85a';
-      inputs.iconSpan.value = '0.50';
-      rebuild();
-    });
+    el('presetDone').addEventListener('click', () => applyPreset('circle-check-regular', '#22a85a', '0.50'));
 
-    el('presetProgress').addEventListener('click', () => {
-      inputs.iconSelect.value = 'arrows-rotate';
-      inputs.iconColor.value = '#cb4056';
-      inputs.iconSpan.value = '0.46';
-      rebuild();
-    });
+    el('presetProgress').addEventListener('click', () => applyPreset('arrows-rotate', '#cb4056', '0.46'));
 
     el('reset').addEventListener('click', () => {
       inputs.iconSearch.value = '';
+      selectedIconKey = 'circle-check-regular';
       populateIconSelect('');
-      inputs.iconSelect.value = 'circle-check-regular';
+      inputs.iconSelect.value = selectedIconKey;
       inputs.iconColor.value = '#22a85a';
       inputs.diameter.value = '16.5';
       inputs.height.value = '2.4';
@@ -533,16 +543,20 @@
       rebuild();
     });
 
-    inputs.iconSearch.addEventListener('input', () => {
-      populateIconSelect(inputs.iconSearch.value);
-      if (!inputs.iconSelect.value && inputs.iconSelect.options.length) {
-        inputs.iconSelect.selectedIndex = 0;
+    inputs.iconSelect.addEventListener('change', () => {
+      if (iconByKey.has(inputs.iconSelect.value)) {
+        selectedIconKey = inputs.iconSelect.value;
       }
       rebuild();
     });
 
+    inputs.iconSearch.addEventListener('input', () => {
+      populateIconSelect(inputs.iconSearch.value);
+      rebuild();
+    });
+
     Object.values(inputs).forEach((node) => {
-      if (node === inputs.iconSearch) return;
+      if (node === inputs.iconSearch || node === inputs.iconSelect) return;
       node.addEventListener('input', rebuild);
       node.addEventListener('change', rebuild);
     });
@@ -550,7 +564,15 @@
     window.addEventListener('resize', resize);
 
     // test hook for automated verification
-    window.__testGenerateSTL = () => exporter.parse(markerGroup, { binary: false }).slice(0, 40);
+    window.__testState = () => {
+      const p = getParams();
+      const baseParts = p.usePocket ? 2 : 1;
+      return {
+        iconKey: p.iconKey,
+        childCount: markerGroup.children.length,
+        hasIcon: markerGroup.children.length > baseParts
+      };
+    };
 
     rebuild();
     resize();
