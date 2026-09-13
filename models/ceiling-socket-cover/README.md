@@ -24,7 +24,7 @@ Reusable OpenSCAD cover to hide a ceiling socket hole.
 - `hole_diameter = 68`
 - `clearance = 2.0`
 - `cover_thickness = 2.4`
-- `center_wire_hole = true`
+- `center_wire_hole = false` (full cover default)
 - `wire_hole_diameter = 12`
 
 ## Notes

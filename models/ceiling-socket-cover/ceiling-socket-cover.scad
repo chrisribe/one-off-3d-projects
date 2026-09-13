@@ -18,7 +18,7 @@ cover_thickness = 2.4;      // top plate thickness (mm)
 edge_rounding = 0.6;        // small rim rounding visual (mm)
 
 // ----- Optional center pass-through -----
-center_wire_hole = true;    // if true, adds center hole for cable/socket stem
+center_wire_hole = false;   // full concealment default (set true only if you need pass-through)
 wire_hole_diameter = 12;    // mm
 
 // ----- Alignment nub (optional) -----
