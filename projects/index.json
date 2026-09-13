@@ -18,6 +18,7 @@
       "type": "model",
       "status": "active",
       "summary": "Reusable parametric ceiling hole cover with simple and fun styles.",
+      "web_url": "./web/ceiling-socket-cover-viewer/",
       "source_url": "https://github.com/chrisribe/one-off-3d-projects/tree/main/models/ceiling-socket-cover",
       "preview": "./models/ceiling-socket-cover/ceiling-socket-cover-preview.png",
       "tags": ["ceiling", "cover", "socket", "scad", "home"]

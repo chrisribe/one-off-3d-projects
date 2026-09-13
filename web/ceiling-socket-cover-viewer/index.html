@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ceiling Socket Cover Viewer</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Inter, system-ui, sans-serif; background: #0f1218; color: #e8edf7; }
+    .wrap { max-width: 1200px; margin: 0 auto; padding: 14px; display: grid; gap: 12px; grid-template-columns: 340px 1fr; }
+    .panel { background: #171c26; border: 1px solid #2a3242; border-radius: 12px; padding: 12px; }
+    .row { margin-bottom: 10px; }
+    .row label { display:flex; justify-content: space-between; gap:8px; margin-bottom:6px; color:#c9d5ef; font-size:.9rem; }
+    input[type="range"], select { width: 100%; }
+    .btns { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; }
+    button { border:1px solid #3a4761; background:#233148; color:#eef3ff; padding:10px; border-radius:10px; font-weight:600; cursor:pointer; }
+    button:hover { background:#2c3e5e; }
+    #view { width:100%; min-height:68vh; border-radius:12px; overflow:hidden; border:1px solid #2a3242; background:radial-gradient(circle at 30% 20%, #202838, #0d1016); }
+    .muted { color:#9fadca; font-size:.9rem; margin-bottom:10px; }
+    .full { grid-column: 1 / -1; }
+    @media (max-width: 900px) { .wrap { grid-template-columns: 1fr; } #view { min-height: 52vh; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="panel">
+      <h1 style="margin:0 0 4px; font-size:1.2rem;">Ceiling Socket Cover Viewer</h1>
+      <div class="muted">Live 3D preview for simple and fun cover styles.</div>
+      <div class="muted" style="margin-top:-4px"><a href="../../index.html" style="color:#9fc0ff">← Back to project index</a></div>
+
+      <div class="row">
+        <label>Style <span id="style_v"></span></label>
+        <select id="style">
+          <option value="simple">Simple</option>
+          <option value="fun">Fun (smiley)</option>
+        </select>
+      </div>
+
+      <div class="row">
+        <label>Hole diameter (mm) <span id="hole_v"></span></label>
+        <input id="hole" type="range" min="45" max="110" step="1" value="68" />
+      </div>
+
+      <div class="row">
+        <label>Clearance (mm) <span id="clearance_v"></span></label>
+        <input id="clearance" type="range" min="1" max="8" step="0.5" value="2" />
+      </div>
+
+      <div class="row">
+        <label>Thickness (mm) <span id="thick_v"></span></label>
+        <input id="thick" type="range" min="1.6" max="4.2" step="0.1" value="2.4" />
+      </div>
+
+      <div class="row">
+        <label>Center hole</label>
+        <select id="centerHole">
+          <option value="off" selected>Off (full cover)</option>
+          <option value="on">On (pass-through)</option>
+        </select>
+      </div>
+
+      <div class="row">
+        <label>Wire hole diameter (mm) <span id="wire_v"></span></label>
+        <input id="wire" type="range" min="6" max="26" step="1" value="12" />
+      </div>
+
+      <div class="btns">
+        <button id="presetSimple">Preset: Simple</button>
+        <button id="presetFun">Preset: Fun</button>
+        <button id="reset" class="full">Reset defaults</button>
+      </div>
+    </div>
+    <div id="view"></div>
+  </div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    const el = (id) => document.getElementById(id);
+    const inputs = {
+      style: el('style'),
+      hole: el('hole'),
+      clearance: el('clearance'),
+      thick: el('thick'),
+      centerHole: el('centerHole'),
+      wire: el('wire')
+    };
+    const labels = {
+      style: el('style_v'),
+      hole: el('hole_v'),
+      clearance: el('clearance_v'),
+      thick: el('thick_v'),
+      wire: el('wire_v')
+    };
+
+    const view = el('view');
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 1200);
+    camera.position.set(0, 52, 78);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 3));
+    view.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.target.set(0, 1, 0);
+    controls.minDistance = 18;
+    controls.maxDistance = 200;
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.82));
+    const key = new THREE.DirectionalLight(0xffffff, 1.08);
+    key.position.set(24, 32, 20);
+    scene.add(key);
+
+    const ground = new THREE.Mesh(
+      new THREE.CircleGeometry(240, 128),
+      new THREE.MeshStandardMaterial({ color: 0x11151f, roughness: 0.95, metalness: 0.02 })
+    );
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = -0.01;
+    scene.add(ground);
+
+    const coverMat = new THREE.MeshStandardMaterial({ color: 0xe3e7ef, roughness: 0.45, metalness: 0.05 });
+    const accentMat = new THREE.MeshStandardMaterial({ color: 0xffce47, roughness: 0.35, metalness: 0.06 });
+
+    let coverGroup = new THREE.Group();
+    scene.add(coverGroup);
+
+    function getParams() {
+      return {
+        style: inputs.style.value,
+        hole: parseFloat(inputs.hole.value),
+        clearance: parseFloat(inputs.clearance.value),
+        thickness: parseFloat(inputs.thick.value),
+        centerHole: inputs.centerHole.value === 'on',
+        wire: parseFloat(inputs.wire.value)
+      };
+    }
+
+    function clearGroup(g) {
+      while (g.children.length) {
+        const c = g.children.pop();
+        c.geometry?.dispose?.();
+      }
+    }
+
+    function makeCoverShape(outerR, centerHole, centerR) {
+      const shape = new THREE.Shape();
+      shape.absarc(0, 0, outerR, 0, Math.PI * 2, false);
+      if (centerHole) {
+        const h = new THREE.Path();
+        h.absarc(0, 0, centerR, 0, Math.PI * 2, true);
+        shape.holes.push(h);
+      }
+      return shape;
+    }
+
+    function buildBase(p) {
+      const group = new THREE.Group();
+      const coverD = p.hole + 2 * p.clearance;
+      const outerR = coverD / 2;
+
+      const shape = makeCoverShape(outerR, p.centerHole, p.wire / 2);
+      const plateGeo = new THREE.ExtrudeGeometry(shape, { depth: p.thickness, steps: 1, bevelEnabled: false, curveSegments: 128 });
+      plateGeo.rotateX(-Math.PI / 2);
+      plateGeo.translate(0, p.thickness, 0);
+      group.add(new THREE.Mesh(plateGeo, coverMat));
+
+      return { group, coverD };
+    }
+
+    function addFunSmiley(group, p, coverD) {
+      const z = p.thickness - 0.02;
+      const faceD = coverD * 0.62;
+      const faceR = faceD / 2;
+      const ringOuter = faceR;
+      const ringInner = faceR * 0.86;
+      const ringH = 0.8;
+
+      const ringShape = new THREE.Shape();
+      ringShape.absarc(0, 0, ringOuter, 0, Math.PI * 2, false);
+      const ringHole = new THREE.Path();
+      ringHole.absarc(0, 0, ringInner, 0, Math.PI * 2, true);
+      ringShape.holes.push(ringHole);
+      const ringGeo = new THREE.ExtrudeGeometry(ringShape, { depth: ringH, steps: 1, bevelEnabled: false, curveSegments: 120 });
+      ringGeo.rotateX(-Math.PI / 2);
+      ringGeo.translate(0, ringH + z, 0);
+      group.add(new THREE.Mesh(ringGeo, accentMat));
+
+      const eyeR = faceD * 0.045;
+      const eyeY = faceD * 0.12;
+      const eyeX = faceD * 0.18;
+      const eyeGeo = new THREE.CylinderGeometry(eyeR, eyeR, ringH, 80);
+      const eyeL = new THREE.Mesh(eyeGeo, accentMat);
+      eyeL.position.set(-eyeX, z + ringH / 2, eyeY);
+      const eyeRMesh = new THREE.Mesh(eyeGeo.clone(), accentMat);
+      eyeRMesh.position.set(eyeX, z + ringH / 2, eyeY);
+      group.add(eyeL, eyeRMesh);
+
+      const smileCurve = new THREE.EllipseCurve(0, -faceD*0.02, faceD*0.22, faceD*0.16, Math.PI*0.12, Math.PI*0.88, false, 0);
+      const smilePts = smileCurve.getPoints(72).map(p2 => new THREE.Vector3(p2.x, z + ringH/2, p2.y));
+      const smileGeo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(smilePts), 72, faceD*0.022, 18, false);
+      group.add(new THREE.Mesh(smileGeo, accentMat));
+    }
+
+    function rebuild() {
+      const p = getParams();
+      labels.style.textContent = p.style;
+      labels.hole.textContent = p.hole.toFixed(0);
+      labels.clearance.textContent = p.clearance.toFixed(1);
+      labels.thick.textContent = p.thickness.toFixed(1);
+      labels.wire.textContent = p.wire.toFixed(0);
+
+      clearGroup(coverGroup);
+      const { group, coverD } = buildBase(p);
+      coverGroup.add(...group.children);
+
+      if (p.style === 'fun') addFunSmiley(coverGroup, p, coverD);
+    }
+
+    function resize() {
+      const w = view.clientWidth;
+      const h = view.clientHeight;
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    }
+
+    function animate() {
+      controls.update();
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+
+    function setSimplePreset() {
+      inputs.style.value = 'simple';
+      inputs.centerHole.value = 'off';
+      inputs.hole.value = '68';
+      inputs.clearance.value = '2';
+      inputs.thick.value = '2.4';
+      rebuild();
+    }
+
+    function setFunPreset() {
+      inputs.style.value = 'fun';
+      inputs.centerHole.value = 'off';
+      inputs.hole.value = '68';
+      inputs.clearance.value = '2.5';
+      inputs.thick.value = '2.6';
+      rebuild();
+    }
+
+    el('presetSimple').addEventListener('click', setSimplePreset);
+    el('presetFun').addEventListener('click', setFunPreset);
+    el('reset').addEventListener('click', () => {
+      inputs.style.value = 'simple';
+      inputs.hole.value = '68';
+      inputs.clearance.value = '2';
+      inputs.thick.value = '2.4';
+      inputs.centerHole.value = 'off';
+      inputs.wire.value = '12';
+      rebuild();
+    });
+
+    Object.values(inputs).forEach((n) => {
+      n.addEventListener('input', rebuild);
+      n.addEventListener('change', rebuild);
+    });
+    window.addEventListener('resize', resize);
+
+    rebuild();
+    resize();
+    animate();
+    window.__appReady = true;
+  </script>
+</body>
+</html>

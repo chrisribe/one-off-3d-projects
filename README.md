@@ -13,6 +13,7 @@ Small, practical 3D models and quick prototypes.
   - Reusable ceiling hole cover for socket fixtures
   - `simple` and `fun` styles in one parametric SCAD
   - Optional center wire pass-through and rear locator ring
+  - Web viewer: `web/ceiling-socket-cover-viewer/index.html`
 
 ## Project index (future-proof navigation)
 
