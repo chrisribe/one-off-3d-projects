@@ -5,7 +5,7 @@ Reusable OpenSCAD cover to hide a ceiling socket hole.
 ## Includes
 
 - `style="simple"`: clean plain cover
-- `style="fun"`: smiley relief cover (for lols)
+- `style="fun"`: cosmic monster relief cover (out-of-the-ordinary)
 
 ## File
 

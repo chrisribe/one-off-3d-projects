@@ -1,7 +1,7 @@
 // Ceiling socket hole cover (medallion style)
 // Reusable parametric design with two options:
 // 1) Simple clean cover
-// 2) Fun smiley cover (for lols)
+// 2) Fun cosmic-monster cover (for lols)
 //
 // Usage:
 // - Set style = "simple" or "fun"
@@ -28,8 +28,8 @@ locator_depth = 1.4;
 locator_wall = 1.2;
 
 // ----- Fun style params -----
-fun_relief_height = 0.8;    // raised smiley depth above plate
-fun_face_scale = 0.62;      // relative size of smiley on cover
+fun_relief_height = 0.9;    // raised relief depth above plate
+fun_face_scale = 0.66;      // relative size of cosmic motif
 
 cover_diameter = hole_diameter + 2 * clearance;
 
@@ -63,42 +63,61 @@ module base_cover() {
   }
 }
 
-module fun_smiley() {
+module curve_strip(pts, d, h, z0=0) {
+  for (i = [0 : len(pts)-2]) {
+    hull() {
+      translate([pts[i][0], pts[i][1], z0]) cylinder(d=d, h=h);
+      translate([pts[i+1][0], pts[i+1][1], z0]) cylinder(d=d, h=h);
+    }
+  }
+}
+
+module fun_cosmic_monster() {
   face_d = cover_diameter * fun_face_scale;
   z0 = cover_thickness - 0.02; // tiny overlap for printable union
-
-  // eyes
-  eye_off_x = face_d * 0.18;
-  eye_off_y = face_d * 0.12;
-  eye_d = face_d * 0.09;
-
-  // smile arc via ring segment subtraction
-  smile_outer = face_d * 0.30;
-  smile_inner = face_d * 0.23;
+  ring_outer = face_d * 0.50;
+  ring_inner = face_d * 0.40;
+  spike_len = face_d * 0.11;
+  spike_w = face_d * 0.11;
 
   union() {
-    // outer circle ring
+    // jagged portal ring
     translate([0,0,z0])
     difference() {
-      cylinder(d = face_d, h = fun_relief_height);
-      translate([0,0,-0.05]) cylinder(d = face_d * 0.86, h = fun_relief_height + 0.1);
+      cylinder(d = ring_outer*2, h = fun_relief_height);
+      translate([0,0,-0.05]) cylinder(d = ring_inner*2, h = fun_relief_height + 0.1);
     }
 
-    // eyes
-    translate([-eye_off_x, eye_off_y, z0]) cylinder(d = eye_d, h = fun_relief_height);
-    translate([ eye_off_x, eye_off_y, z0]) cylinder(d = eye_d, h = fun_relief_height);
-
-    // smile
-    translate([0, -face_d*0.02, z0])
-    intersection() {
-      difference() {
-        cylinder(d = smile_outer*2, h = fun_relief_height);
-        translate([0,0,-0.05]) cylinder(d = smile_inner*2, h = fun_relief_height + 0.1);
-      }
-      // keep lower half only
-      translate([0, -smile_outer*0.65, -0.05])
-      cube([smile_outer*2.2, smile_outer*1.2, fun_relief_height + 0.1], center = true);
+    for (a = [0 : 30 : 330]) {
+      rotate([0,0,a])
+      translate([ring_outer*0.92, 0, z0])
+      linear_extrude(height = fun_relief_height)
+      polygon(points = [[0,0], [spike_len, spike_w*0.5], [spike_len, -spike_w*0.5]]);
     }
+
+    // central eye + side eyes + pupil
+    translate([0, face_d*0.05, z0]) cylinder(d = face_d * 0.24, h = fun_relief_height);
+    translate([-face_d*0.19, face_d*0.09, z0]) cylinder(d = face_d * 0.11, h = fun_relief_height);
+    translate([ face_d*0.19, face_d*0.09, z0]) cylinder(d = face_d * 0.11, h = fun_relief_height);
+    translate([0, face_d*0.05, z0 + fun_relief_height*0.14]) cylinder(d = face_d * 0.10, h = fun_relief_height*0.90);
+
+    // fangs
+    for (sx = [-1, 1]) {
+      translate([sx*face_d*0.11, -face_d*0.17, z0])
+      linear_extrude(height = fun_relief_height)
+      polygon(points = [[0,0],[face_d*0.05,0],[face_d*0.025,-face_d*0.10]]);
+    }
+
+    // mirrored tentacles
+    t_pts = [
+      for (i = [0:7])
+      [
+        face_d*(0.06 + i*0.06),
+        -face_d*(0.10 + i*0.025) + face_d*0.04*sin(i*40)
+      ]
+    ];
+    curve_strip(t_pts, face_d*0.085, fun_relief_height, z0);
+    mirror([1,0,0]) curve_strip(t_pts, face_d*0.085, fun_relief_height, z0);
   }
 }
 
@@ -109,7 +128,7 @@ module simple_style() {
 module fun_style() {
   union() {
     base_cover();
-    fun_smiley();
+    fun_cosmic_monster();
   }
 }
 
