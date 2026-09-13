@@ -5,7 +5,8 @@ Reusable OpenSCAD cover to hide a ceiling socket hole.
 ## Includes
 
 - `style="simple"`: clean plain cover
-- `style="fun"`: cosmic monster relief cover (out-of-the-ordinary)
+- `style="fun"`: cosmic monster relief cover
+- `style="kraken"`: chaotic abyss/kraken relief cover
 
 ## File
 
@@ -31,4 +32,4 @@ Reusable OpenSCAD cover to hide a ceiling socket hole.
 
 - If using an existing socket stem/cable in center, keep `center_wire_hole=true`.
 - Increase `cover_thickness` to 3.0+ for stiffer large-diameter covers.
-- Smiley relief is unioned with a tiny overlap for print reliability.
+- Fun/Kraken reliefs are unioned with a tiny overlap for print reliability.

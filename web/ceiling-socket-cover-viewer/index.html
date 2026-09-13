@@ -13,7 +13,7 @@
     .row { margin-bottom: 10px; }
     .row label { display:flex; justify-content: space-between; gap:8px; margin-bottom:6px; color:#c9d5ef; font-size:.9rem; }
     input[type="range"], select { width: 100%; }
-    .btns { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; }
+    .btns { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:10px; }
     button { border:1px solid #3a4761; background:#233148; color:#eef3ff; padding:10px; border-radius:10px; font-weight:600; cursor:pointer; }
     button:hover { background:#2c3e5e; }
     #view { width:100%; min-height:68vh; border-radius:12px; overflow:hidden; border:1px solid #2a3242; background:radial-gradient(circle at 30% 20%, #202838, #0d1016); }
@@ -26,7 +26,7 @@
   <div class="wrap">
     <div class="panel">
       <h1 style="margin:0 0 4px; font-size:1.2rem;">Ceiling Socket Cover Viewer</h1>
-      <div class="muted">Live 3D preview for simple and out-of-the-ordinary cosmic styles.</div>
+      <div class="muted">Live 3D preview for simple, cosmic monster, and kraken abyss styles.</div>
       <div class="muted" style="margin-top:-4px"><a href="../../index.html" style="color:#9fc0ff">← Back to project index</a></div>
 
       <div class="row">
@@ -34,6 +34,7 @@
         <select id="style">
           <option value="simple">Simple</option>
           <option value="fun">Fun (cosmic monster)</option>
+          <option value="kraken">Kraken (abyss)</option>
         </select>
       </div>
 
@@ -67,7 +68,8 @@
 
       <div class="btns">
         <button id="presetSimple">Preset: Simple</button>
-        <button id="presetFun">Preset: Fun</button>
+        <button id="presetFun">Preset: Cosmic</button>
+        <button id="presetKraken">Preset: Kraken</button>
         <button id="reset" class="full">Reset defaults</button>
       </div>
     </div>
@@ -272,6 +274,90 @@
       group.add(new THREE.Mesh(geoL, accentMat));
     }
 
+    function addKrakenAbyss(group, p, coverD) {
+      const z = p.thickness - 0.02;
+      const faceD = coverD * 0.72;
+      const ringOuter = faceD * 0.475;
+      const ringInner = faceD * 0.37;
+      const ringH = 0.95;
+
+      // broken abyss ring
+      const baseRing = new THREE.Shape();
+      baseRing.absarc(0, 0, ringOuter, 0, Math.PI * 2, false);
+      const baseHole = new THREE.Path();
+      baseHole.absarc(0, 0, ringInner, 0, Math.PI * 2, true);
+      baseRing.holes.push(baseHole);
+      const ringGeo = new THREE.ExtrudeGeometry(baseRing, { depth: ringH, steps: 1, bevelEnabled: false, curveSegments: 120 });
+      ringGeo.rotateX(-Math.PI / 2);
+      ringGeo.translate(0, ringH + z, 0);
+      group.add(new THREE.Mesh(ringGeo, accentMat));
+
+      const biteGeo = new THREE.BoxGeometry(faceD * 0.32, ringH, faceD * 0.22);
+      const bite1 = new THREE.Mesh(biteGeo, coverMat);
+      bite1.position.set(faceD * 0.39, z + ringH * 0.52, faceD * 0.12);
+      bite1.rotation.y = THREE.MathUtils.degToRad(18);
+      const bite2 = new THREE.Mesh(new THREE.BoxGeometry(faceD * 0.28, ringH, faceD * 0.18), coverMat);
+      bite2.position.set(-faceD * 0.37, z + ringH * 0.52, -faceD * 0.08);
+      bite2.rotation.y = THREE.MathUtils.degToRad(-16);
+      group.add(bite1, bite2);
+
+      // eyes + slits
+      const eyeMain = new THREE.Mesh(new THREE.CylinderGeometry(faceD * 0.08, faceD * 0.08, ringH, 70), accentMat);
+      eyeMain.position.set(-faceD * 0.13, z + ringH / 2, faceD * 0.08);
+      const eyeMain2 = new THREE.Mesh(new THREE.CylinderGeometry(faceD * 0.08, faceD * 0.08, ringH, 70), accentMat);
+      eyeMain2.position.set(faceD * 0.13, z + ringH / 2, faceD * 0.08);
+      group.add(eyeMain, eyeMain2);
+
+      const slitGeo = new THREE.BoxGeometry(faceD * 0.02, ringH * 0.9, faceD * 0.10);
+      const slit1 = new THREE.Mesh(slitGeo, coverMat);
+      slit1.position.copy(eyeMain.position);
+      const slit2 = new THREE.Mesh(slitGeo, coverMat);
+      slit2.position.copy(eyeMain2.position);
+      group.add(slit1, slit2);
+
+      // horns
+      const hornShape = new THREE.Shape();
+      hornShape.moveTo(0, 0);
+      hornShape.lineTo(faceD * 0.07, faceD * 0.05);
+      hornShape.lineTo(faceD * 0.02, faceD * 0.14);
+      hornShape.lineTo(0, 0);
+      const hornGeo = new THREE.ExtrudeGeometry(hornShape, { depth: ringH, steps: 1, bevelEnabled: false, curveSegments: 8 });
+      hornGeo.rotateX(-Math.PI / 2);
+      const hornL = new THREE.Mesh(hornGeo.clone(), accentMat);
+      hornL.position.set(-faceD * 0.18, z + ringH, faceD * 0.26);
+      const hornR = new THREE.Mesh(hornGeo.clone(), accentMat);
+      hornR.position.set(faceD * 0.11, z + ringH, faceD * 0.28);
+      group.add(hornL, hornR);
+
+      // tentacles (asymmetric)
+      const makeTentacle = (points) => {
+        const c = new THREE.CatmullRomCurve3(points);
+        const g = new THREE.TubeGeometry(c, 72, faceD * 0.04, 18, false);
+        group.add(new THREE.Mesh(g, accentMat));
+      };
+      const ptsA = [];
+      const ptsB = [];
+      for (let i = 0; i <= 8; i += 1) {
+        ptsA.push(new THREE.Vector3(faceD * (0.03 + i * 0.06), z + ringH * 0.53, -faceD * (0.03 + i * 0.03) + faceD * 0.05 * Math.sin(THREE.MathUtils.degToRad(i * 38))));
+      }
+      for (let i = 0; i <= 7; i += 1) {
+        ptsB.push(new THREE.Vector3(-faceD * (0.02 + i * 0.055), z + ringH * 0.50, -faceD * (0.02 + i * 0.028) + faceD * 0.06 * Math.sin(THREE.MathUtils.degToRad(i * 46 + 25))));
+      }
+      makeTentacle(ptsA);
+      makeTentacle(ptsB);
+
+      // maw ring
+      const maw = new THREE.Shape();
+      maw.absarc(0, 0, faceD * 0.12, 0, Math.PI * 2, false);
+      const mawHole = new THREE.Path();
+      mawHole.absarc(0, 0, faceD * 0.07, 0, Math.PI * 2, true);
+      maw.holes.push(mawHole);
+      const mawGeo = new THREE.ExtrudeGeometry(maw, { depth: ringH, steps: 1, bevelEnabled: false, curveSegments: 64 });
+      mawGeo.rotateX(-Math.PI / 2);
+      mawGeo.translate(0, ringH + z, -faceD * 0.08);
+      group.add(new THREE.Mesh(mawGeo, accentMat));
+    }
+
     function rebuild() {
       const p = getParams();
       labels.style.textContent = p.style;
@@ -284,7 +370,13 @@
       const { group, coverD } = buildBase(p);
       coverGroup.add(...group.children);
 
-      if (p.style === 'fun') addFunCosmicMonster(coverGroup, p, coverD);
+      if (p.style === 'kraken') {
+        accentMat.color.set(0x8f5bff);
+        addKrakenAbyss(coverGroup, p, coverD);
+      } else if (p.style === 'fun') {
+        accentMat.color.set(0xffce47);
+        addFunCosmicMonster(coverGroup, p, coverD);
+      }
     }
 
     function resize() {
@@ -319,8 +411,18 @@
       rebuild();
     }
 
+    function setKrakenPreset() {
+      inputs.style.value = 'kraken';
+      inputs.centerHole.value = 'off';
+      inputs.hole.value = '68';
+      inputs.clearance.value = '3.0';
+      inputs.thick.value = '2.8';
+      rebuild();
+    }
+
     el('presetSimple').addEventListener('click', setSimplePreset);
     el('presetFun').addEventListener('click', setFunPreset);
+    el('presetKraken').addEventListener('click', setKrakenPreset);
     el('reset').addEventListener('click', () => {
       inputs.style.value = 'simple';
       inputs.hole.value = '68';

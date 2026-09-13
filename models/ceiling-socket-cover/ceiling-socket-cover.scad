@@ -1,17 +1,18 @@
 // Ceiling socket hole cover (medallion style)
-// Reusable parametric design with two options:
+// Reusable parametric design with three options:
 // 1) Simple clean cover
-// 2) Fun cosmic-monster cover (for lols)
+// 2) Fun cosmic-monster cover
+// 3) Kraken abyss cover (chaotic)
 //
 // Usage:
-// - Set style = "simple" or "fun"
+// - Set style = "simple", "fun", or "kraken"
 // - Tune hole_diameter to your measured ceiling hole
 // - Export STL from OpenSCAD
 
 $fn = 160;
 
 // ----- Core fit params -----
-style = "simple";          // "simple" or "fun"
+style = "simple";          // "simple", "fun", or "kraken"
 hole_diameter = 68;         // measured hole in ceiling (mm)
 clearance = 2.0;            // extra coverage beyond hole radius (mm)
 cover_thickness = 2.4;      // top plate thickness (mm)
@@ -121,6 +122,50 @@ module fun_cosmic_monster() {
   }
 }
 
+module kraken_abyss() {
+  face_d = cover_diameter * 0.72;
+  z0 = cover_thickness - 0.02;
+  eye_d = face_d * 0.16;
+
+  union() {
+    // broken abyss ring
+    difference() {
+      translate([0,0,z0]) cylinder(d = face_d*0.95, h = fun_relief_height);
+      translate([0,0,z0-0.05]) cylinder(d = face_d*0.74, h = fun_relief_height + 0.1);
+      rotate([0,0,18]) translate([ face_d*0.42,0,z0-0.1]) cube([face_d*0.32, face_d*0.22, fun_relief_height+0.3], center=true);
+      rotate([0,0,196]) translate([ face_d*0.40,0,z0-0.1]) cube([face_d*0.28, face_d*0.18, fun_relief_height+0.3], center=true);
+    }
+
+    // eyes
+    translate([-face_d*0.13, face_d*0.08, z0]) cylinder(d = eye_d, h = fun_relief_height);
+    translate([ face_d*0.13, face_d*0.08, z0]) cylinder(d = eye_d, h = fun_relief_height);
+
+    // pupil slits
+    translate([-face_d*0.13, face_d*0.08, z0 + fun_relief_height*0.12]) cube([eye_d*0.20, eye_d*0.92, fun_relief_height*0.82], center=true);
+    translate([ face_d*0.13, face_d*0.08, z0 + fun_relief_height*0.12]) cube([eye_d*0.20, eye_d*0.92, fun_relief_height*0.82], center=true);
+
+    // crown horns
+    for (sx=[-1,1]) {
+      translate([sx*face_d*0.17, face_d*0.28, z0])
+      linear_extrude(height = fun_relief_height)
+      polygon(points=[[0,0],[sx*face_d*0.08,face_d*0.06],[sx*face_d*0.03,face_d*0.14]]);
+    }
+
+    // asymmetric tentacle forest
+    t1 = [for (i=[0:8]) [ face_d*(0.03+i*0.06), -face_d*(0.03+i*0.03) + face_d*0.05*sin(i*38) ]];
+    t2 = [for (i=[0:7]) [-face_d*(0.02+i*0.055), -face_d*(0.02+i*0.028) + face_d*0.06*sin(i*46+25) ]];
+    curve_strip(t1, face_d*0.088, fun_relief_height, z0);
+    curve_strip(t2, face_d*0.082, fun_relief_height, z0);
+
+    // central maw
+    translate([0, -face_d*0.08, z0])
+    difference() {
+      cylinder(d = face_d*0.24, h = fun_relief_height);
+      translate([0,0,-0.05]) cylinder(d = face_d*0.14, h = fun_relief_height + 0.1);
+    }
+  }
+}
+
 module simple_style() {
   base_cover();
 }
@@ -132,8 +177,17 @@ module fun_style() {
   }
 }
 
+module kraken_style() {
+  union() {
+    base_cover();
+    kraken_abyss();
+  }
+}
+
 if (style == "fun") {
   fun_style();
+} else if (style == "kraken") {
+  kraken_style();
 } else {
   simple_style();
 }
