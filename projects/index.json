@@ -11,6 +11,16 @@
       "source_url": "https://github.com/chrisribe/one-off-3d-projects/tree/main/models/x1c-whiteboard-markers",
       "preview": "./models/x1c-whiteboard-markers/x1c-whiteboard-markers-current-preview.png",
       "tags": ["x1c", "whiteboard", "magnet", "stl", "scad"]
+    },
+    {
+      "slug": "ceiling-socket-cover",
+      "title": "Ceiling Socket Cover",
+      "type": "model",
+      "status": "active",
+      "summary": "Reusable parametric ceiling hole cover with simple and fun styles.",
+      "source_url": "https://github.com/chrisribe/one-off-3d-projects/tree/main/models/ceiling-socket-cover",
+      "preview": "./models/ceiling-socket-cover/ceiling-socket-cover-preview.png",
+      "tags": ["ceiling", "cover", "socket", "scad", "home"]
     }
   ]
 }

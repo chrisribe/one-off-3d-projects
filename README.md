@@ -9,6 +9,11 @@ Small, practical 3D models and quick prototypes.
   - Sized under a US dime in width
   - Variants with magnet press-fit pocket
 
+- `models/ceiling-socket-cover/`
+  - Reusable ceiling hole cover for socket fixtures
+  - `simple` and `fun` styles in one parametric SCAD
+  - Optional center wire pass-through and rear locator ring
+
 ## Project index (future-proof navigation)
 
 - Root page: `index.html` (cards for all projects)
@@ -20,7 +25,8 @@ Small, practical 3D models and quick prototypes.
 - `web/x1c-marker-customizer/index.html`
 - Open on GitHub Pages and users can:
   - edit marker params live
-  - preview both markers in 3D
+  - preview one marker in 3D
+  - choose from a curated Font Awesome icon list
   - download STL directly in browser
 
 ## Notes
