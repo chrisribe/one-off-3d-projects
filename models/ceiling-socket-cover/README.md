@@ -16,8 +16,11 @@ Reusable OpenSCAD cover to hide a ceiling socket hole.
 
 1. Measure the visible hole diameter in the ceiling.
 2. Set `hole_diameter` to that value (mm).
-3. Keep `clearance` around `2.0` to start (more if the hole edge is rough).
-4. Optional: enable `rear_locator_ring` to self-center the cover in the hole.
+3. Choose mounting:
+   - `mount_mode="press_fit"` for tool-less friction tabs
+   - `mount_mode="screw_tabs"` for two screw points
+   - `mount_mode="locator_ring"` for centering only
+4. Keep `clearance` around `2.0` to start (more if the hole edge is rough).
 5. Export STL and test print.
 
 ## Default parameters
@@ -25,11 +28,14 @@ Reusable OpenSCAD cover to hide a ceiling socket hole.
 - `hole_diameter = 68`
 - `clearance = 2.0`
 - `cover_thickness = 2.4`
+- `mount_mode = "press_fit"`
 - `center_wire_hole = false` (full cover default)
 - `wire_hole_diameter = 12`
 
 ## Notes
 
 - If using an existing socket stem/cable in center, keep `center_wire_hole=true`.
+- For tighter holes, increase `press_fit_tab_depth` in 0.2 mm steps.
+- For screw mounts, adjust `screw_tab_span` so tabs land on solid ceiling substrate.
 - Increase `cover_thickness` to 3.0+ for stiffer large-diameter covers.
 - Fun/Kraken reliefs are unioned with a tiny overlap for print reliability.
