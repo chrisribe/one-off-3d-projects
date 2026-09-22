@@ -81,6 +81,7 @@
         <button id="presetSimple">Preset: Simple</button>
         <button id="presetFun">Preset: Cosmic</button>
         <button id="presetKraken">Preset: Kraken</button>
+        <button id="downloadStl">Download STL</button>
         <button id="reset" class="full">Reset defaults</button>
       </div>
     </div>
@@ -99,6 +100,7 @@
   <script type="module">
     import * as THREE from 'three';
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { STLExporter } from 'three/addons/exporters/STLExporter.js';
 
     const el = (id) => document.getElementById(id);
     const inputs = {
@@ -148,7 +150,6 @@
 
     const coverMat = new THREE.MeshStandardMaterial({ color: 0xe3e7ef, roughness: 0.45, metalness: 0.05 });
     const accentMat = new THREE.MeshStandardMaterial({ color: 0xffce47, roughness: 0.35, metalness: 0.06 });
-    const cutMat = new THREE.MeshStandardMaterial({ color: 0x0f1218, roughness: 1, metalness: 0 });
 
     let coverGroup = new THREE.Group();
     scene.add(coverGroup);
@@ -201,13 +202,15 @@
       const locatorWall = 1.2;
 
       const addLocatorRing = () => {
-        const outer = new THREE.CylinderGeometry(locatorD / 2, locatorD / 2, locatorDepth, 96);
-        const inner = new THREE.CylinderGeometry(Math.max(0.1, (locatorD - 2 * locatorWall) / 2), Math.max(0.1, (locatorD - 2 * locatorWall) / 2), locatorDepth + 0.2, 96);
-        outer.translate(0, -locatorDepth / 2, 0);
-        inner.translate(0, -locatorDepth / 2, 0);
-        const ringOuter = new THREE.Mesh(outer, coverMat);
-        const ringInner = new THREE.Mesh(inner, cutMat);
-        group.add(ringOuter, ringInner);
+        const ringShape = new THREE.Shape();
+        ringShape.absarc(0, 0, locatorD / 2, 0, Math.PI * 2, false);
+        const ringHole = new THREE.Path();
+        ringHole.absarc(0, 0, Math.max(0.1, (locatorD - 2 * locatorWall) / 2), 0, Math.PI * 2, true);
+        ringShape.holes.push(ringHole);
+        const ringGeo = new THREE.ExtrudeGeometry(ringShape, { depth: locatorDepth, steps: 1, bevelEnabled: false, curveSegments: 96 });
+        ringGeo.rotateX(-Math.PI / 2);
+        ringGeo.translate(0, -locatorDepth, 0);
+        group.add(new THREE.Mesh(ringGeo, coverMat));
       };
 
       if (p.mountMode === 'press_fit' || p.mountMode === 'locator_ring') {
@@ -238,18 +241,21 @@
         const coverR = coverD / 2;
         for (const sx of [-1, 1]) {
           const x = sx * tabSpan / 2;
-          const ear = new THREE.Mesh(new THREE.CylinderGeometry(tabD / 2, tabD / 2, tabT, 72), coverMat);
-          ear.position.set(x, tabT / 2, 0);
-          group.add(ear);
+
+          const earShape = new THREE.Shape();
+          earShape.absarc(0, 0, tabD / 2, 0, Math.PI * 2, false);
+          const earHole = new THREE.Path();
+          earHole.absarc(0, 0, holeD / 2, 0, Math.PI * 2, true);
+          earShape.holes.push(earHole);
+          const earGeo = new THREE.ExtrudeGeometry(earShape, { depth: tabT, steps: 1, bevelEnabled: false, curveSegments: 72 });
+          earGeo.rotateX(-Math.PI / 2);
+          earGeo.translate(x, 0, 0);
+          group.add(new THREE.Mesh(earGeo, coverMat));
 
           const bridgeLen = Math.max(2, Math.abs(x - sx * (coverR - 1.0)));
           const bridge = new THREE.Mesh(new THREE.BoxGeometry(bridgeLen, tabT, 6.2), coverMat);
           bridge.position.set(sx * (coverR - 1.0 + bridgeLen / 2), tabT / 2, 0);
           group.add(bridge);
-
-          const hole = new THREE.Mesh(new THREE.CylinderGeometry(holeD / 2, holeD / 2, tabT + 0.4, 48), cutMat);
-          hole.position.set(x, tabT / 2, 0);
-          group.add(hole);
         }
       }
 
@@ -466,6 +472,31 @@
       requestAnimationFrame(animate);
     }
 
+    function downloadCurrentStl() {
+      const p = getParams();
+      const exportGroup = new THREE.Group();
+      const { group, coverD } = buildBase(p);
+      exportGroup.add(...group.children);
+
+      if (p.style === 'kraken') {
+        addKrakenAbyss(exportGroup, p, coverD);
+      } else if (p.style === 'fun') {
+        addFunCosmicMonster(exportGroup, p, coverD);
+      }
+
+      const exporter = new STLExporter();
+      const stlText = exporter.parse(exportGroup, { binary: false });
+      const blob = new Blob([stlText], { type: 'model/stl' });
+      const a = document.createElement('a');
+      const safeMode = p.mountMode.replace(/[^a-z0-9_\-]/gi, '_');
+      a.href = URL.createObjectURL(blob);
+      a.download = `ceiling-cover-${p.style}-${safeMode}-${Math.round(p.hole)}mm.stl`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(a.href);
+    }
+
     function setSimplePreset() {
       inputs.style.value = 'simple';
       inputs.mountMode.value = 'press_fit';
@@ -499,6 +530,7 @@
     el('presetSimple').addEventListener('click', setSimplePreset);
     el('presetFun').addEventListener('click', setFunPreset);
     el('presetKraken').addEventListener('click', setKrakenPreset);
+    el('downloadStl').addEventListener('click', downloadCurrentStl);
     el('reset').addEventListener('click', () => {
       inputs.style.value = 'simple';
       inputs.hole.value = '68';
