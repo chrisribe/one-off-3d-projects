@@ -134,93 +134,83 @@ module curve_strip(pts, d, h, z0=0) {
 
 module fun_cosmic_monster() {
   face_d = cover_diameter * fun_face_scale;
-  z0 = cover_thickness - 0.02; // tiny overlap for printable union
-  ring_outer = face_d * 0.50;
-  ring_inner = face_d * 0.40;
-  spike_len = face_d * 0.11;
-  spike_w = face_d * 0.11;
+  z0 = cover_thickness - 0.02;
+  ring_outer = face_d * 0.48;
+  ring_inner = face_d * 0.39;
 
   union() {
-    // jagged portal ring
+    // cleaner portal ring
     translate([0,0,z0])
     difference() {
       cylinder(d = ring_outer*2, h = fun_relief_height);
       translate([0,0,-0.05]) cylinder(d = ring_inner*2, h = fun_relief_height + 0.1);
     }
 
-    for (a = [0 : 30 : 330]) {
+    // soft rays
+    for (a = [0 : 45 : 315]) {
       rotate([0,0,a])
-      translate([ring_outer*0.92, 0, z0])
-      linear_extrude(height = fun_relief_height)
-      polygon(points = [[0,0], [spike_len, spike_w*0.5], [spike_len, -spike_w*0.5]]);
+      hull() {
+        translate([ring_outer*0.88, 0, z0]) cylinder(d = face_d*0.085, h = fun_relief_height);
+        translate([ring_outer*1.05, 0, z0]) cylinder(d = face_d*0.035, h = fun_relief_height);
+      }
     }
 
-    // central eye + side eyes + pupil
-    translate([0, face_d*0.05, z0]) cylinder(d = face_d * 0.24, h = fun_relief_height);
-    translate([-face_d*0.19, face_d*0.09, z0]) cylinder(d = face_d * 0.11, h = fun_relief_height);
-    translate([ face_d*0.19, face_d*0.09, z0]) cylinder(d = face_d * 0.11, h = fun_relief_height);
-    translate([0, face_d*0.05, z0 + fun_relief_height*0.14]) cylinder(d = face_d * 0.10, h = fun_relief_height*0.90);
+    // central eye stack
+    translate([0, face_d*0.02, z0]) cylinder(d = face_d * 0.25, h = fun_relief_height);
+    translate([0, face_d*0.02, z0 + fun_relief_height*0.12]) cylinder(d = face_d * 0.11, h = fun_relief_height*0.88);
 
-    // fangs
-    for (sx = [-1, 1]) {
-      translate([sx*face_d*0.11, -face_d*0.17, z0])
-      linear_extrude(height = fun_relief_height)
-      polygon(points = [[0,0],[face_d*0.05,0],[face_d*0.025,-face_d*0.10]]);
+    // upper eye arc
+    translate([0, face_d*0.10, z0])
+    difference() {
+      cylinder(d = face_d*0.34, h = fun_relief_height*0.78);
+      translate([0,-face_d*0.11,-0.05]) cylinder(d = face_d*0.30, h = fun_relief_height*0.9);
     }
 
-    // mirrored tentacles
-    t_pts = [
-      for (i = [0:7])
-      [
-        face_d*(0.06 + i*0.06),
-        -face_d*(0.10 + i*0.025) + face_d*0.04*sin(i*40)
-      ]
-    ];
-    curve_strip(t_pts, face_d*0.085, fun_relief_height, z0);
-    mirror([1,0,0]) curve_strip(t_pts, face_d*0.085, fun_relief_height, z0);
+    // mirrored cheek tendrils
+    t_pts = [for (i=[0:7]) [face_d*(0.07 + i*0.055), -face_d*(0.10 + i*0.016) + face_d*0.028*sin(i*45)]];
+    curve_strip(t_pts, face_d*0.066, fun_relief_height, z0);
+    mirror([1,0,0]) curve_strip(t_pts, face_d*0.066, fun_relief_height, z0);
   }
 }
 
 module kraken_abyss() {
   face_d = cover_diameter * 0.72;
   z0 = cover_thickness - 0.02;
-  eye_d = face_d * 0.16;
 
   union() {
-    // broken abyss ring
+    // crown ring
+    translate([0,0,z0])
     difference() {
-      translate([0,0,z0]) cylinder(d = face_d*0.95, h = fun_relief_height);
-      translate([0,0,z0-0.05]) cylinder(d = face_d*0.74, h = fun_relief_height + 0.1);
-      rotate([0,0,18]) translate([ face_d*0.42,0,z0-0.1]) cube([face_d*0.32, face_d*0.22, fun_relief_height+0.3], center=true);
-      rotate([0,0,196]) translate([ face_d*0.40,0,z0-0.1]) cube([face_d*0.28, face_d*0.18, fun_relief_height+0.3], center=true);
+      cylinder(d = face_d*0.92, h = fun_relief_height);
+      translate([0,0,-0.05]) cylinder(d = face_d*0.72, h = fun_relief_height + 0.1);
     }
+
+    // head
+    translate([0, face_d*0.03, z0]) cylinder(d = face_d*0.28, h = fun_relief_height);
 
     // eyes
-    translate([-face_d*0.13, face_d*0.08, z0]) cylinder(d = eye_d, h = fun_relief_height);
-    translate([ face_d*0.13, face_d*0.08, z0]) cylinder(d = eye_d, h = fun_relief_height);
+    translate([-face_d*0.10, face_d*0.11, z0]) cylinder(d = face_d * 0.10, h = fun_relief_height);
+    translate([ face_d*0.10, face_d*0.11, z0]) cylinder(d = face_d * 0.10, h = fun_relief_height);
+    translate([-face_d*0.10, face_d*0.11, z0 + fun_relief_height*0.15]) cube([face_d*0.018, face_d*0.08, fun_relief_height*0.8], center=true);
+    translate([ face_d*0.10, face_d*0.11, z0 + fun_relief_height*0.15]) cube([face_d*0.018, face_d*0.08, fun_relief_height*0.8], center=true);
 
-    // pupil slits
-    translate([-face_d*0.13, face_d*0.08, z0 + fun_relief_height*0.12]) cube([eye_d*0.20, eye_d*0.92, fun_relief_height*0.82], center=true);
-    translate([ face_d*0.13, face_d*0.08, z0 + fun_relief_height*0.12]) cube([eye_d*0.20, eye_d*0.92, fun_relief_height*0.82], center=true);
-
-    // crown horns
-    for (sx=[-1,1]) {
-      translate([sx*face_d*0.17, face_d*0.28, z0])
-      linear_extrude(height = fun_relief_height)
-      polygon(points=[[0,0],[sx*face_d*0.08,face_d*0.06],[sx*face_d*0.03,face_d*0.14]]);
+    // 6 smooth tentacles
+    for (a = [-62,-38,-14,14,38,62]) {
+      rot = a;
+      pts = [
+        [0, -face_d*0.02],
+        [face_d*0.10*sin(rot), -face_d*(0.12 + 0.02*cos(rot))],
+        [face_d*0.21*sin(rot), -face_d*(0.20 + 0.03*cos(rot))],
+        [face_d*0.31*sin(rot), -face_d*(0.28 + 0.02*sin(rot))]
+      ];
+      curve_strip(pts, face_d*0.070, fun_relief_height, z0);
     }
 
-    // asymmetric tentacle forest
-    t1 = [for (i=[0:8]) [ face_d*(0.03+i*0.06), -face_d*(0.03+i*0.03) + face_d*0.05*sin(i*38) ]];
-    t2 = [for (i=[0:7]) [-face_d*(0.02+i*0.055), -face_d*(0.02+i*0.028) + face_d*0.06*sin(i*46+25) ]];
-    curve_strip(t1, face_d*0.088, fun_relief_height, z0);
-    curve_strip(t2, face_d*0.082, fun_relief_height, z0);
-
-    // central maw
-    translate([0, -face_d*0.08, z0])
+    // center maw ring
+    translate([0, -face_d*0.04, z0])
     difference() {
-      cylinder(d = face_d*0.24, h = fun_relief_height);
-      translate([0,0,-0.05]) cylinder(d = face_d*0.14, h = fun_relief_height + 0.1);
+      cylinder(d = face_d*0.18, h = fun_relief_height*0.9);
+      translate([0,0,-0.05]) cylinder(d = face_d*0.10, h = fun_relief_height + 0.1);
     }
   }
 }

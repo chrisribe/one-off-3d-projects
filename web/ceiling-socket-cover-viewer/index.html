@@ -265,11 +265,11 @@
     function addFunCosmicMonster(group, p, coverD) {
       const z = p.thickness - 0.02;
       const faceD = coverD * 0.66;
-      const ringOuter = faceD * 0.50;
-      const ringInner = faceD * 0.40;
+      const ringOuter = faceD * 0.48;
+      const ringInner = faceD * 0.39;
       const ringH = 0.9;
 
-      // jagged portal ring
+      // cleaner portal ring
       const ringShape = new THREE.Shape();
       ringShape.absarc(0, 0, ringOuter, 0, Math.PI * 2, false);
       const ringHole = new THREE.Path();
@@ -280,159 +280,104 @@
       ringGeo.translate(0, ringH + z, 0);
       group.add(new THREE.Mesh(ringGeo, accentMat));
 
-      const spikeLen = faceD * 0.11;
-      const spikeW = faceD * 0.11;
-      const spikeShape = new THREE.Shape();
-      spikeShape.moveTo(0, 0);
-      spikeShape.lineTo(spikeLen, spikeW * 0.5);
-      spikeShape.lineTo(spikeLen, -spikeW * 0.5);
-      spikeShape.lineTo(0, 0);
-      const spikeGeo2D = new THREE.ExtrudeGeometry(spikeShape, { depth: ringH, steps: 1, bevelEnabled: false, curveSegments: 8 });
-      spikeGeo2D.rotateX(-Math.PI / 2);
-      for (let a = 0; a < 360; a += 30) {
-        const g = spikeGeo2D.clone();
-        const m = new THREE.Matrix4();
-        m.makeRotationY(THREE.MathUtils.degToRad(a));
-        g.applyMatrix4(m);
-        const x = Math.cos(THREE.MathUtils.degToRad(a)) * ringOuter * 0.92;
-        const zPos = Math.sin(THREE.MathUtils.degToRad(a)) * ringOuter * 0.92;
-        g.translate(x, ringH + z, zPos);
-        group.add(new THREE.Mesh(g, accentMat));
+      // soft rays
+      for (let a = 0; a < 360; a += 45) {
+        const rayA = new THREE.Mesh(new THREE.CylinderGeometry(faceD * 0.0425, faceD * 0.0425, ringH, 36), accentMat);
+        const rayB = new THREE.Mesh(new THREE.CylinderGeometry(faceD * 0.0175, faceD * 0.0175, ringH, 24), accentMat);
+        const rad = THREE.MathUtils.degToRad(a);
+        rayA.position.set(Math.cos(rad) * ringOuter * 0.88, z + ringH / 2, Math.sin(rad) * ringOuter * 0.88);
+        rayB.position.set(Math.cos(rad) * ringOuter * 1.05, z + ringH / 2, Math.sin(rad) * ringOuter * 1.05);
+        group.add(rayA, rayB);
       }
 
-      // central eye + side eyes + pupil
-      const eyeGeo = new THREE.CylinderGeometry(faceD * 0.12, faceD * 0.12, ringH, 80);
-      const eye = new THREE.Mesh(eyeGeo, accentMat);
-      eye.position.set(0, z + ringH / 2, faceD * 0.05);
+      // central eye stack
+      const eye = new THREE.Mesh(new THREE.CylinderGeometry(faceD * 0.125, faceD * 0.125, ringH, 80), accentMat);
+      eye.position.set(0, z + ringH / 2, faceD * 0.02);
       group.add(eye);
-
-      const sideEyeGeo = new THREE.CylinderGeometry(faceD * 0.055, faceD * 0.055, ringH, 60);
-      const eyeL = new THREE.Mesh(sideEyeGeo, accentMat);
-      eyeL.position.set(-faceD * 0.19, z + ringH / 2, faceD * 0.09);
-      const eyeR = new THREE.Mesh(sideEyeGeo.clone(), accentMat);
-      eyeR.position.set(faceD * 0.19, z + ringH / 2, faceD * 0.09);
-      group.add(eyeL, eyeR);
-
-      const pupilGeo = new THREE.CylinderGeometry(faceD * 0.05, faceD * 0.05, ringH * 0.90, 60);
-      const pupil = new THREE.Mesh(pupilGeo, coverMat);
-      pupil.position.set(0, z + ringH * 0.57, faceD * 0.05);
+      const pupil = new THREE.Mesh(new THREE.CylinderGeometry(faceD * 0.055, faceD * 0.055, ringH * 0.88, 60), coverMat);
+      pupil.position.set(0, z + ringH * 0.56, faceD * 0.02);
       group.add(pupil);
 
-      // fangs
-      const fangShape = new THREE.Shape();
-      fangShape.moveTo(0, 0);
-      fangShape.lineTo(faceD * 0.05, 0);
-      fangShape.lineTo(faceD * 0.025, -faceD * 0.10);
-      fangShape.lineTo(0, 0);
-      const fangGeo = new THREE.ExtrudeGeometry(fangShape, { depth: ringH, steps: 1, bevelEnabled: false, curveSegments: 6 });
-      fangGeo.rotateX(-Math.PI / 2);
-      const fangL = new THREE.Mesh(fangGeo.clone(), accentMat);
-      fangL.position.set(-faceD * 0.11, z + ringH, -faceD * 0.17);
-      const fangR = new THREE.Mesh(fangGeo.clone(), accentMat);
-      fangR.position.set(faceD * 0.06, z + ringH, -faceD * 0.17);
-      group.add(fangL, fangR);
+      // upper eye arc (crescent)
+      const arcOuter = new THREE.Shape();
+      arcOuter.absarc(0, 0, faceD * 0.17, 0, Math.PI * 2, false);
+      const arcHole = new THREE.Path();
+      arcHole.absarc(0, -faceD * 0.11, faceD * 0.15, 0, Math.PI * 2, true);
+      arcOuter.holes.push(arcHole);
+      const arcGeo = new THREE.ExtrudeGeometry(arcOuter, { depth: ringH * 0.78, steps: 1, bevelEnabled: false, curveSegments: 80 });
+      arcGeo.rotateX(-Math.PI / 2);
+      arcGeo.translate(0, z + ringH * 0.78, faceD * 0.10);
+      group.add(new THREE.Mesh(arcGeo, accentMat));
 
-      // mirrored tentacles (tube curves)
+      // mirrored cheek tendrils
       const tPts = [];
       for (let i = 0; i <= 7; i += 1) {
         tPts.push(new THREE.Vector3(
-          faceD * (0.06 + i * 0.06),
+          faceD * (0.07 + i * 0.055),
           z + ringH * 0.52,
-          -faceD * (0.10 + i * 0.025) + faceD * 0.04 * Math.sin(THREE.MathUtils.degToRad(i * 40))
+          -faceD * (0.10 + i * 0.016) + faceD * 0.028 * Math.sin(THREE.MathUtils.degToRad(i * 45))
         ));
       }
-      const tubeR = faceD * 0.042;
-      const curveR = new THREE.CatmullRomCurve3(tPts);
-      const geoR = new THREE.TubeGeometry(curveR, 72, tubeR, 18, false);
-      group.add(new THREE.Mesh(geoR, accentMat));
-
+      const tubeR = faceD * 0.033;
+      group.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(tPts), 72, tubeR, 18, false), accentMat));
       const tPtsL = tPts.map((v) => new THREE.Vector3(-v.x, v.y, v.z));
-      const curveL = new THREE.CatmullRomCurve3(tPtsL);
-      const geoL = new THREE.TubeGeometry(curveL, 72, tubeR, 18, false);
-      group.add(new THREE.Mesh(geoL, accentMat));
+      group.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(tPtsL), 72, tubeR, 18, false), accentMat));
     }
 
     function addKrakenAbyss(group, p, coverD) {
       const z = p.thickness - 0.02;
       const faceD = coverD * 0.72;
-      const ringOuter = faceD * 0.475;
-      const ringInner = faceD * 0.37;
       const ringH = 0.95;
 
-      // broken abyss ring
-      const baseRing = new THREE.Shape();
-      baseRing.absarc(0, 0, ringOuter, 0, Math.PI * 2, false);
-      const baseHole = new THREE.Path();
-      baseHole.absarc(0, 0, ringInner, 0, Math.PI * 2, true);
-      baseRing.holes.push(baseHole);
-      const ringGeo = new THREE.ExtrudeGeometry(baseRing, { depth: ringH, steps: 1, bevelEnabled: false, curveSegments: 120 });
-      ringGeo.rotateX(-Math.PI / 2);
-      ringGeo.translate(0, ringH + z, 0);
-      group.add(new THREE.Mesh(ringGeo, accentMat));
+      // crown ring
+      const crown = new THREE.Shape();
+      crown.absarc(0, 0, faceD * 0.46, 0, Math.PI * 2, false);
+      const crownHole = new THREE.Path();
+      crownHole.absarc(0, 0, faceD * 0.36, 0, Math.PI * 2, true);
+      crown.holes.push(crownHole);
+      const crownGeo = new THREE.ExtrudeGeometry(crown, { depth: ringH, steps: 1, bevelEnabled: false, curveSegments: 120 });
+      crownGeo.rotateX(-Math.PI / 2);
+      crownGeo.translate(0, ringH + z, 0);
+      group.add(new THREE.Mesh(crownGeo, accentMat));
 
-      const biteGeo = new THREE.BoxGeometry(faceD * 0.32, ringH, faceD * 0.22);
-      const bite1 = new THREE.Mesh(biteGeo, coverMat);
-      bite1.position.set(faceD * 0.39, z + ringH * 0.52, faceD * 0.12);
-      bite1.rotation.y = THREE.MathUtils.degToRad(18);
-      const bite2 = new THREE.Mesh(new THREE.BoxGeometry(faceD * 0.28, ringH, faceD * 0.18), coverMat);
-      bite2.position.set(-faceD * 0.37, z + ringH * 0.52, -faceD * 0.08);
-      bite2.rotation.y = THREE.MathUtils.degToRad(-16);
-      group.add(bite1, bite2);
+      // head
+      const head = new THREE.Mesh(new THREE.CylinderGeometry(faceD * 0.14, faceD * 0.14, ringH, 80), accentMat);
+      head.position.set(0, z + ringH / 2, faceD * 0.03);
+      group.add(head);
 
-      // eyes + slits
-      const eyeMain = new THREE.Mesh(new THREE.CylinderGeometry(faceD * 0.08, faceD * 0.08, ringH, 70), accentMat);
-      eyeMain.position.set(-faceD * 0.13, z + ringH / 2, faceD * 0.08);
-      const eyeMain2 = new THREE.Mesh(new THREE.CylinderGeometry(faceD * 0.08, faceD * 0.08, ringH, 70), accentMat);
-      eyeMain2.position.set(faceD * 0.13, z + ringH / 2, faceD * 0.08);
-      group.add(eyeMain, eyeMain2);
+      // eyes
+      const eyeL = new THREE.Mesh(new THREE.CylinderGeometry(faceD * 0.05, faceD * 0.05, ringH, 60), accentMat);
+      const eyeR = new THREE.Mesh(new THREE.CylinderGeometry(faceD * 0.05, faceD * 0.05, ringH, 60), accentMat);
+      eyeL.position.set(-faceD * 0.10, z + ringH / 2, faceD * 0.11);
+      eyeR.position.set(faceD * 0.10, z + ringH / 2, faceD * 0.11);
+      group.add(eyeL, eyeR);
+      const slitGeo = new THREE.BoxGeometry(faceD * 0.018, ringH * 0.8, faceD * 0.08);
+      const slitL = new THREE.Mesh(slitGeo, coverMat);
+      const slitR = new THREE.Mesh(slitGeo, coverMat);
+      slitL.position.copy(eyeL.position);
+      slitR.position.copy(eyeR.position);
+      group.add(slitL, slitR);
 
-      const slitGeo = new THREE.BoxGeometry(faceD * 0.02, ringH * 0.9, faceD * 0.10);
-      const slit1 = new THREE.Mesh(slitGeo, coverMat);
-      slit1.position.copy(eyeMain.position);
-      const slit2 = new THREE.Mesh(slitGeo, coverMat);
-      slit2.position.copy(eyeMain2.position);
-      group.add(slit1, slit2);
-
-      // horns
-      const hornShape = new THREE.Shape();
-      hornShape.moveTo(0, 0);
-      hornShape.lineTo(faceD * 0.07, faceD * 0.05);
-      hornShape.lineTo(faceD * 0.02, faceD * 0.14);
-      hornShape.lineTo(0, 0);
-      const hornGeo = new THREE.ExtrudeGeometry(hornShape, { depth: ringH, steps: 1, bevelEnabled: false, curveSegments: 8 });
-      hornGeo.rotateX(-Math.PI / 2);
-      const hornL = new THREE.Mesh(hornGeo.clone(), accentMat);
-      hornL.position.set(-faceD * 0.18, z + ringH, faceD * 0.26);
-      const hornR = new THREE.Mesh(hornGeo.clone(), accentMat);
-      hornR.position.set(faceD * 0.11, z + ringH, faceD * 0.28);
-      group.add(hornL, hornR);
-
-      // tentacles (asymmetric)
-      const makeTentacle = (points) => {
-        const c = new THREE.CatmullRomCurve3(points);
-        const g = new THREE.TubeGeometry(c, 72, faceD * 0.04, 18, false);
-        group.add(new THREE.Mesh(g, accentMat));
-      };
-      const ptsA = [];
-      const ptsB = [];
-      for (let i = 0; i <= 8; i += 1) {
-        ptsA.push(new THREE.Vector3(faceD * (0.03 + i * 0.06), z + ringH * 0.53, -faceD * (0.03 + i * 0.03) + faceD * 0.05 * Math.sin(THREE.MathUtils.degToRad(i * 38))));
+      // six smooth tentacles
+      for (const a of [-62, -38, -14, 14, 38, 62]) {
+        const pts = [
+          new THREE.Vector3(0, z + ringH * 0.50, -faceD * 0.02),
+          new THREE.Vector3(faceD * 0.10 * Math.sin(THREE.MathUtils.degToRad(a)), z + ringH * 0.50, -faceD * (0.12 + 0.02 * Math.cos(THREE.MathUtils.degToRad(a)))),
+          new THREE.Vector3(faceD * 0.21 * Math.sin(THREE.MathUtils.degToRad(a)), z + ringH * 0.50, -faceD * (0.20 + 0.03 * Math.cos(THREE.MathUtils.degToRad(a)))),
+          new THREE.Vector3(faceD * 0.31 * Math.sin(THREE.MathUtils.degToRad(a)), z + ringH * 0.50, -faceD * (0.28 + 0.02 * Math.sin(THREE.MathUtils.degToRad(a))))
+        ];
+        group.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 72, faceD * 0.035, 18, false), accentMat));
       }
-      for (let i = 0; i <= 7; i += 1) {
-        ptsB.push(new THREE.Vector3(-faceD * (0.02 + i * 0.055), z + ringH * 0.50, -faceD * (0.02 + i * 0.028) + faceD * 0.06 * Math.sin(THREE.MathUtils.degToRad(i * 46 + 25))));
-      }
-      makeTentacle(ptsA);
-      makeTentacle(ptsB);
 
-      // maw ring
+      // center maw ring
       const maw = new THREE.Shape();
-      maw.absarc(0, 0, faceD * 0.12, 0, Math.PI * 2, false);
+      maw.absarc(0, 0, faceD * 0.09, 0, Math.PI * 2, false);
       const mawHole = new THREE.Path();
-      mawHole.absarc(0, 0, faceD * 0.07, 0, Math.PI * 2, true);
+      mawHole.absarc(0, 0, faceD * 0.05, 0, Math.PI * 2, true);
       maw.holes.push(mawHole);
-      const mawGeo = new THREE.ExtrudeGeometry(maw, { depth: ringH, steps: 1, bevelEnabled: false, curveSegments: 64 });
+      const mawGeo = new THREE.ExtrudeGeometry(maw, { depth: ringH * 0.9, steps: 1, bevelEnabled: false, curveSegments: 64 });
       mawGeo.rotateX(-Math.PI / 2);
-      mawGeo.translate(0, ringH + z, -faceD * 0.08);
+      mawGeo.translate(0, z + ringH * 0.9, -faceD * 0.04);
       group.add(new THREE.Mesh(mawGeo, accentMat));
     }
 
