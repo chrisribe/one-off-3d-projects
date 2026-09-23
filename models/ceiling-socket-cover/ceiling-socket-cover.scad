@@ -16,6 +16,7 @@ $fn = 160;
 style = "simple";          // "simple", "fun", or "kraken"
 hole_diameter = 68;         // measured hole in ceiling (mm)
 clearance = 2.0;            // extra coverage beyond hole radius (mm)
+cover_diameter_override = 0; // set >0 for exact full disk diameter (e.g. 135)
 cover_thickness = 2.4;      // top plate thickness (mm)
 edge_rounding = 0.6;        // small rim rounding visual (mm)
 
@@ -49,7 +50,10 @@ screw_tab_thickness = 2.6;
 fun_relief_height = 0.9;    // raised relief depth above plate
 fun_face_scale = 0.66;      // relative size of cosmic motif
 
-cover_diameter = hole_diameter + 2 * clearance;
+cover_diameter_auto = hole_diameter + 2 * clearance;
+cover_diameter = cover_diameter_override > 0
+  ? max(cover_diameter_override, cover_diameter_auto)
+  : cover_diameter_auto;
 
 module rounded_disc(d, h, fillet = 0.6) {
   // cheap visual soft edge: stacked cylinders

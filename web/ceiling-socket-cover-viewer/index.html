@@ -41,12 +41,17 @@
 
       <div class="row">
         <label>Hole diameter (mm) <span id="hole_v"></span></label>
-        <input id="hole" type="range" min="45" max="110" step="1" value="68" />
+        <input id="hole" type="range" min="45" max="160" step="1" value="68" />
       </div>
 
       <div class="row">
         <label>Clearance (mm) <span id="clearance_v"></span></label>
-        <input id="clearance" type="range" min="1" max="8" step="0.5" value="2" />
+        <input id="clearance" type="range" min="1" max="25" step="0.5" value="2" />
+      </div>
+
+      <div class="row">
+        <label>Full disk diameter (mm) <span id="cover_v"></span></label>
+        <input id="cover" type="range" min="0" max="220" step="1" value="0" />
       </div>
 
       <div class="row">
@@ -107,6 +112,7 @@
       style: el('style'),
       hole: el('hole'),
       clearance: el('clearance'),
+      cover: el('cover'),
       thick: el('thick'),
       mountMode: el('mountMode'),
       centerHole: el('centerHole'),
@@ -116,6 +122,7 @@
       style: el('style_v'),
       hole: el('hole_v'),
       clearance: el('clearance_v'),
+      cover: el('cover_v'),
       thick: el('thick_v'),
       wire: el('wire_v')
     };
@@ -159,6 +166,7 @@
         style: inputs.style.value,
         hole: parseFloat(inputs.hole.value),
         clearance: parseFloat(inputs.clearance.value),
+        cover: parseFloat(inputs.cover.value),
         thickness: parseFloat(inputs.thick.value),
         mountMode: inputs.mountMode.value,
         centerHole: inputs.centerHole.value === 'on',
@@ -186,7 +194,8 @@
 
     function buildBase(p) {
       const group = new THREE.Group();
-      const coverD = p.hole + 2 * p.clearance;
+      const autoCoverD = p.hole + 2 * p.clearance;
+      const coverD = p.cover > 0 ? Math.max(p.cover, autoCoverD) : autoCoverD;
       const outerR = coverD / 2;
 
       const shape = makeCoverShape(outerR, p.centerHole, p.wire / 2);
@@ -386,12 +395,13 @@
       labels.style.textContent = p.style;
       labels.hole.textContent = p.hole.toFixed(0);
       labels.clearance.textContent = p.clearance.toFixed(1);
-      labels.thick.textContent = p.thickness.toFixed(1);
-      labels.wire.textContent = p.wire.toFixed(0);
 
       clearGroup(coverGroup);
       const { group, coverD } = buildBase(p);
       coverGroup.add(...group.children);
+      labels.cover.textContent = p.cover <= 0 ? `auto (${coverD.toFixed(0)})` : coverD.toFixed(0);
+      labels.thick.textContent = p.thickness.toFixed(1);
+      labels.wire.textContent = p.wire.toFixed(0);
 
       if (p.style === 'kraken') {
         accentMat.color.set(0x8f5bff);
@@ -435,7 +445,7 @@
       const a = document.createElement('a');
       const safeMode = p.mountMode.replace(/[^a-z0-9_\-]/gi, '_');
       a.href = URL.createObjectURL(blob);
-      a.download = `ceiling-cover-${p.style}-${safeMode}-${Math.round(p.hole)}mm.stl`;
+      a.download = `ceiling-cover-${p.style}-${safeMode}-hole${Math.round(p.hole)}-cover${Math.round(coverD)}.stl`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -448,6 +458,7 @@
       inputs.centerHole.value = 'off';
       inputs.hole.value = '68';
       inputs.clearance.value = '2';
+      inputs.cover.value = '0';
       inputs.thick.value = '2.4';
       rebuild();
     }
@@ -458,6 +469,7 @@
       inputs.centerHole.value = 'off';
       inputs.hole.value = '68';
       inputs.clearance.value = '2.5';
+      inputs.cover.value = '0';
       inputs.thick.value = '2.6';
       rebuild();
     }
@@ -468,6 +480,7 @@
       inputs.centerHole.value = 'off';
       inputs.hole.value = '68';
       inputs.clearance.value = '3.0';
+      inputs.cover.value = '0';
       inputs.thick.value = '2.8';
       rebuild();
     }
@@ -480,6 +493,7 @@
       inputs.style.value = 'simple';
       inputs.hole.value = '68';
       inputs.clearance.value = '2';
+      inputs.cover.value = '0';
       inputs.thick.value = '2.4';
       inputs.mountMode.value = 'press_fit';
       inputs.centerHole.value = 'off';
